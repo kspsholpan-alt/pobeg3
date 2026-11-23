@@ -1,0 +1,3713 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Побег из Пиксельного Замка — Интерактивный квест по информатике</title>
+  <style>
+    /* =====================================================================
+       1. БАЗОВЫЕ ПЕРЕМЕННЫЕ, СБРОС И РЕТРО-RPG ПАЛИТРА (СЛАНЕЦ / ИНДИГО)
+       ===================================================================== */
+    :root {
+      --bg-deep: #0f172a;
+      --bg-panel: #1e293b;
+      --bg-card: #263349;
+      --bg-input: #0b1220;
+      --border-main: #334155;
+      --border-glow: #475569;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-gold: #facc15;
+      --accent-gold-dark: #ca8a04;
+      --accent-emerald: #34d399;
+      --accent-emerald-dark: #059669;
+      --accent-cyan: #38bdf8;
+      --accent-cyan-dark: #0284c7;
+      --accent-rose: #fb7185;
+      --accent-amber: #f59e0b;
+      --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'Courier New', Consolas, Monaco, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 20% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(250, 204, 21, 0.07) 0%, transparent 45%),
+        linear-gradient(to right, rgba(51, 65, 85, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(51, 65, 85, 0.25) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .app-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* =====================================================================
+       2. ВЕРХНЯЯ ПАНЕЛЬ (HUD): ЗАЛ, БАЛЛЫ, ПРОГРЕСС И 6 АРТЕФАКТОВ
+       ===================================================================== */
+    .hud-bar {
+      background: rgba(30, 41, 59, 0.96);
+      border: 2px solid var(--border-main);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hud-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hud-hall-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-glow);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .hud-right-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-score-pill {
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.55);
+      color: var(--accent-gold);
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .hud-score-pill.bump {
+      animation: scorePop 0.5s ease;
+    }
+
+    @keyframes scorePop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.16); box-shadow: 0 0 18px rgba(250, 204, 21, 0.7); }
+      100% { transform: scale(1); }
+    }
+
+    .hud-sound-btn {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-glow);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .hud-sound-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .hud-bottom-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .hud-progress-wrap {
+      flex: 1 1 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-progress-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
+      transition: width 0.35s ease;
+    }
+
+    .hud-inventory {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .inv-slot {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--bg-deep);
+      border: 1px dashed var(--border-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      opacity: 0.55;
+      transition: all 0.25s ease;
+      user-select: none;
+    }
+
+    .inv-slot.unlocked {
+      opacity: 1;
+      border: 1px solid var(--accent-gold);
+      background: rgba(250, 204, 21, 0.16);
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
+      animation: popScale 0.45s ease;
+    }
+
+    .inv-slot.shard {
+      opacity: 0.95;
+      border: 1px dashed var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.14);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+    }
+
+    @keyframes popScale {
+      0% { transform: scale(0.75); }
+      60% { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+
+    /* =====================================================================
+       3. КАРТОЧКИ ЭКРАНОВ И РЕТРО-КНОПКИ
+       ===================================================================== */
+    .rpg-card {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-main);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .rpg-card.python-theme {
+      border-color: rgba(56, 189, 248, 0.65);
+      box-shadow: 0 16px 40px rgba(2, 132, 199, 0.22);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
+      user-select: none;
+      text-align: center;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(2px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: #082f49;
+      border-color: #7dd3fc;
+      box-shadow: 0 4px 0 #0369a1;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 100%);
+    }
+
+    .btn-emerald {
+      background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+      color: #022c22;
+      border-color: #6ee7b7;
+      box-shadow: 0 4px 0 #065f46;
+    }
+
+    .btn-emerald:hover:not(:disabled) {
+      background: linear-gradient(180deg, #6ee7b7 0%, #10b981 100%);
+    }
+
+    .btn-gold {
+      background: linear-gradient(180deg, #fde047 0%, #eab308 100%);
+      color: #422006;
+      border-color: #fef08a;
+      box-shadow: 0 4px 0 #a16207;
+    }
+
+    .btn-gold:hover:not(:disabled) {
+      background: linear-gradient(180deg, #fef08a 0%, #facc15 100%);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border-color: var(--border-glow);
+      box-shadow: 0 3px 0 #1e293b;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-hint {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-cyan);
+      border-color: rgba(56, 189, 248, 0.45);
+      font-size: 13px;
+      padding: 10px 15px;
+    }
+
+    .btn-hint:hover:not(:disabled) {
+      background: rgba(56, 189, 248, 0.22);
+    }
+
+    .btn-skip {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      border-color: var(--border-glow);
+      font-size: 14px;
+    }
+
+    .btn-skip:hover:not(:disabled) {
+      border-color: #94a3b8;
+    }
+
+    .btn-skip.confirming {
+      background: rgba(245, 158, 11, 0.24);
+      color: #fde68a;
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+    }
+
+    /* =====================================================================
+       4. СТАРТОВЫЙ ЭКРАН
+       ===================================================================== */
+    .hero-header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.5);
+      color: var(--accent-gold);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .hero-title {
+      font-family: var(--font-mono);
+      font-size: clamp(24px, 4.5vw, 36px);
+      color: var(--accent-gold);
+      text-shadow: 0 3px 0 #713f12;
+      margin-bottom: 8px;
+    }
+
+    .hero-subtitle {
+      color: #cbd5e1;
+      font-size: 15px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .start-controls-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 16px;
+      padding: 18px;
+      max-width: 560px;
+      margin: 0 auto 22px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+
+    .text-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 2px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .text-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    .start-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .start-actions-row .btn-gold {
+      flex: 1 1 220px;
+    }
+
+    .halls-preview-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--accent-emerald);
+      text-align: center;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .halls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .hall-info-card {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .hall-info-icon {
+      font-size: 26px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hall-info-title {
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--text-main);
+      margin-bottom: 3px;
+    }
+
+    .hall-info-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* =====================================================================
+       5. ИГРОВОЙ ЭКРАН: ЗАГОЛОВОК УРОВНЯ, СТЕППЕР 5 ВОПРОСОВ И ВИДЖЕТЫ
+       ===================================================================== */
+    .level-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-main);
+      margin-bottom: 16px;
+    }
+
+    .theme-tag {
+      display: inline-block;
+      background: rgba(52, 211, 153, 0.14);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      color: var(--accent-emerald);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+    }
+
+    .theme-tag.py-tag {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.55);
+      color: var(--accent-cyan);
+    }
+
+    .level-title {
+      font-family: var(--font-mono);
+      font-size: clamp(19px, 3vw, 25px);
+      color: var(--accent-gold);
+    }
+
+    .level-reward-pill {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Степпер 5 вопросов */
+    .subq-stepper {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .subq-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .subq-label {
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+
+    .subq-dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subq-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-glow);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .subq-dot.current {
+      border-color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+    }
+
+    .subq-dot.solved {
+      border-color: var(--accent-emerald);
+      background: rgba(52, 211, 153, 0.22);
+      color: var(--accent-emerald);
+    }
+
+    .subq-dot.skipped {
+      border-color: var(--accent-amber);
+      background: rgba(245, 158, 11, 0.16);
+      color: #fde68a;
+    }
+
+    .subq-points-badge {
+      background: rgba(250, 204, 21, 0.12);
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      color: var(--accent-gold);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+    }
+
+    .question-prompt {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #f1f5f9;
+      margin-bottom: 18px;
+    }
+
+    /* Общий контейнер интерактивного виджета */
+    .stage-box {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .stage-subtitle {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 10px;
+    }
+
+    /* --- Виджет Уровня 1: Битовые веса и таблица алфавита 1-32 --- */
+    .cipher-cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .cipher-card {
+      background: var(--bg-panel);
+      border: 2px solid var(--accent-gold);
+      border-radius: 12px;
+      padding: 10px 14px;
+      text-align: center;
+      min-width: 96px;
+    }
+
+    .cipher-card-idx {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .cipher-card-bits {
+      font-family: var(--font-mono);
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--accent-gold);
+      letter-spacing: 0.08em;
+    }
+
+    .bit-switches-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .bit-switch-btn {
+      width: 68px;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 8px 6px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.15s ease;
+    }
+
+    .bit-switch-btn.on {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .bit-weight-lbl {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .bit-val-lbl {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .bit-live-readout {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+      background: rgba(30, 41, 59, 0.7);
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+
+    .alpha-table-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+
+    .alpha-cell-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-main);
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.15s ease;
+    }
+
+    .alpha-cell-btn:hover {
+      border-color: var(--accent-cyan);
+      background: var(--bg-card);
+    }
+
+    .alpha-cell-btn.selected {
+      background: rgba(250, 204, 21, 0.2);
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+    }
+
+    .alpha-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .alpha-char {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-emerald);
+    }
+
+    /* --- Виджет Уровня 2: Пиксельная сетка 5x5 --- */
+    .pixel-workbench {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .pixel-codes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pixel-code-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-main);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 15px;
+    }
+
+    .pixel-code-row.matched {
+      border-color: var(--accent-emerald);
+      background: rgba(52, 211, 153, 0.14);
+    }
+
+    .pixel-grid-5x5 {
+      display: grid;
+      grid-template-columns: repeat(5, 44px);
+      grid-template-rows: repeat(5, 44px);
+      gap: 6px;
+      background: var(--bg-panel);
+      padding: 12px;
+      border-radius: 14px;
+      border: 2px solid var(--border-glow);
+    }
+
+    .px-cell-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: 2px solid #475569;
+      background: #e2e8f0;
+      color: #475569;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .px-cell-btn.filled {
+      background: #0f172a;
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      box-shadow: inset 0 0 8px rgba(56, 189, 248, 0.35);
+    }
+
+    .px-cell-btn.solved-gold {
+      background: var(--accent-gold);
+      border-color: #fef08a;
+      color: #422006;
+    }
+
+    /* --- Виджет Уровня 3: Лаборатория RGB --- */
+    .rgb-lab-grid {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .rgb-sliders-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .rgb-channel-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-main);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+
+    .rgb-channel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .rgb-controls-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rgb-step-btn {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-glow);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 4px 9px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .rgb-step-btn:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .rgb-range {
+      flex: 1;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+      height: 8px;
+    }
+
+    .rgb-crystal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rgb-crystal-orb {
+      width: 108px;
+      height: 108px;
+      border-radius: 24px;
+      transform: rotate(45deg);
+      margin: 14px 0;
+      border: 3px solid rgba(255, 255, 255, 0.65);
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    /* --- Виджет Уровня 4: Координатная плоскость 6x6 --- */
+    .coord-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .coord-board-with-axes {
+      display: inline-grid;
+      grid-template-columns: 32px repeat(6, 48px);
+      gap: 6px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .axis-lbl {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent-cyan);
+    }
+
+    .coord-tile-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-glow);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .coord-tile-btn:hover {
+      border-color: var(--accent-cyan);
+      color: var(--text-main);
+    }
+
+    .coord-tile-btn.knight {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .coord-tile-btn.selected {
+      background: rgba(250, 204, 21, 0.24);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.45);
+    }
+
+    /* --- Виджет Уровня 5: Полоса пикселей RLE --- */
+    .rle-strip-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .rle-block {
+      width: 42px;
+      height: 48px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .rle-block.black { background: #0f172a; color: #f8fafc; border-color: #64748b; }
+    .rle-block.white { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+    .rle-block.red   { background: #dc2626; color: #ffffff; border-color: #fca5a5; }
+    .rle-block.blue  { background: #2563eb; color: #ffffff; border-color: #93c5fd; }
+
+    .rle-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .formula-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .formula-chip {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--accent-gold);
+    }
+
+    /* --- Виджет Уровня 6: Редактор Python + мини-справочник --- */
+    .py-code-editor {
+      background: #070d19;
+      border: 2px solid rgba(56, 189, 248, 0.45);
+      border-radius: 14px;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 15px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+    }
+
+    .py-line {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: pre;
+      transition: background 0.15s ease;
+    }
+
+    .py-line.highlighted {
+      background: rgba(250, 204, 21, 0.18);
+      box-shadow: inset 3px 0 0 var(--accent-gold);
+    }
+
+    .py-line-num {
+      color: #64748b;
+      user-select: none;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    .tok-kw  { color: #c084fc; font-weight: 700; }
+    .tok-fn  { color: #38bdf8; font-weight: 700; }
+    .tok-str { color: #34d399; }
+    .tok-num { color: #facc15; font-weight: 700; }
+    .tok-var { color: #f8fafc; }
+    .tok-op  { color: #94a3b8; }
+
+    .py-docs-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .py-doc-btn {
+      background: var(--bg-panel);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .py-doc-btn.active {
+      background: rgba(56, 189, 248, 0.22);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .py-doc-panel {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border-glow);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #e2e8f0;
+    }
+
+    /* =====================================================================
+       6. ПАНЕЛЬ ОТВЕТА, ПОДСКАЗКИ И КАРТОЧКИ РЕЗУЛЬТАТА
+       ===================================================================== */
+    .answer-panel {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .answer-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .answer-row .text-input {
+      flex: 1 1 240px;
+    }
+
+    .feedback-banner {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .feedback-banner.error {
+      background: rgba(251, 113, 133, 0.14);
+      border: 1px solid rgba(251, 113, 133, 0.55);
+      color: #fecdd3;
+    }
+
+    .feedback-banner.info {
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.55);
+      color: #bae6fd;
+    }
+
+    .solved-card {
+      margin-top: 14px;
+      background: linear-gradient(180deg, rgba(52, 211, 153, 0.16) 0%, rgba(6, 78, 59, 0.35) 100%);
+      border: 2px solid var(--accent-emerald);
+      border-radius: 14px;
+      padding: 16px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .solved-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .solved-title {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-emerald);
+    }
+
+    .solved-pts-pill {
+      background: rgba(52, 211, 153, 0.22);
+      border: 1px solid var(--accent-emerald);
+      color: #a7f3d0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    .solved-explanation {
+      font-size: 14px;
+      color: #e2e8f0;
+      margin-bottom: 14px;
+    }
+
+    .skipped-card {
+      margin-top: 14px;
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.14) 0%, rgba(30, 41, 59, 0.6) 100%);
+      border: 2px solid var(--accent-amber);
+      border-radius: 14px;
+      padding: 16px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .skipped-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .skipped-title {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 800;
+      color: #fde68a;
+    }
+
+    .skipped-pts-pill {
+      background: rgba(148, 163, 184, 0.2);
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+
+    /* Подсказки */
+    .hints-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hints-top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hints-counter {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .hint-item {
+      background: rgba(56, 189, 248, 0.1);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #e0f2fe;
+      animation: fadeIn 0.2s ease;
+    }
+
+    /* =====================================================================
+       7. МОДАЛЬНОЕ ОКНО НАГРАДЫ И ФИНАЛЬНЫЙ СЕРТИФИКАТ
+       ===================================================================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.84);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-card {
+      background: var(--bg-panel);
+      border: 2px solid var(--accent-gold);
+      border-radius: 22px;
+      padding: 26px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+      animation: popScale 0.35s ease;
+    }
+
+    .modal-artifact-glow {
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 14px auto;
+      border-radius: 22px;
+      background: rgba(250, 204, 21, 0.14);
+      border: 2px solid var(--accent-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      box-shadow: 0 0 24px rgba(250, 204, 21, 0.45);
+    }
+
+    /* Сертификат */
+    .cert-frame {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 3px double var(--accent-gold);
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .cert-player-name {
+      font-family: var(--font-mono);
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 800;
+      color: var(--accent-gold);
+      margin: 8px 0;
+    }
+
+    .cert-big-score {
+      font-family: var(--font-mono);
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 800;
+      color: var(--accent-emerald);
+      margin-bottom: 4px;
+    }
+
+    .cert-grade-badge {
+      display: inline-block;
+      background: rgba(250, 204, 21, 0.16);
+      border: 1px solid var(--accent-gold);
+      color: #fef08a;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin: 10px 0 18px 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+    }
+
+    .stat-card {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-main);
+      border-radius: 12px;
+      padding: 12px 8px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .cert-table {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto 20px auto;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .cert-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-main);
+    }
+
+    .cert-table td.pts-cell {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      color: var(--accent-gold);
+      white-space: nowrap;
+    }
+
+    .cert-artifacts-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      max-width: 640px;
+      margin: 0 auto 20px auto;
+    }
+
+    .cert-art-item {
+      background: var(--bg-deep);
+      border: 1px solid rgba(250, 204, 21, 0.5);
+      border-radius: 12px;
+      padding: 10px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .cert-art-item.shard {
+      border: 1px dashed var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .cert-art-item.locked {
+      border: 1px dashed var(--border-main);
+      opacity: 0.45;
+    }
+
+    .cert-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .copy-toast {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-emerald);
+    }
+
+    /* Скрытое поле для надёжного копирования в буфер обмена */
+    #clipboard-fallback {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+
+    /* =====================================================================
+       8. АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ И ПЛАНШЕТОВ
+       ===================================================================== */
+    @media (max-width: 680px) {
+      .rpg-card {
+        padding: 16px;
+      }
+      .alpha-table-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .rgb-lab-grid {
+        grid-template-columns: 1fr;
+      }
+      .pixel-grid-5x5 {
+        grid-template-columns: repeat(5, 38px);
+        grid-template-rows: repeat(5, 38px);
+        gap: 5px;
+      }
+      .px-cell-btn {
+        width: 38px;
+        height: 38px;
+      }
+      .coord-board-with-axes {
+        grid-template-columns: 24px repeat(6, 40px);
+        gap: 4px;
+      }
+      .coord-tile-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 10px;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .cert-artifacts-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- ===================================================================
+         ВЕРХНЯЯ ИГРОВАЯ ПАНЕЛЬ (HUD) — ОТОБРАЖАЕТСЯ ВО ВРЕМЯ ПРОХОЖДЕНИЯ
+         =================================================================== -->
+    <header id="hud-bar" class="hud-bar hidden">
+      <div class="hud-top-row">
+        <div id="hud-hall-badge" class="hud-hall-badge">🏰 Уровень 1 из 6</div>
+        <div class="hud-right-group">
+          <div id="hud-score-pill" class="hud-score-pill">⭐ Баллы: <span id="hud-score-val">0 / 300</span></div>
+          <button id="hud-sound-btn" type="button" class="hud-sound-btn" title="Переключить звук">🔊 Звук: ВКЛ</button>
+        </div>
+      </div>
+
+      <div class="hud-bottom-row">
+        <div class="hud-progress-wrap">
+          <div class="hud-progress-labels">
+            <span>Прогресс по замку</span>
+            <span id="hud-progress-pct">0 / 30 (0%)</span>
+          </div>
+          <div class="progress-track">
+            <div id="hud-progress-bar" class="progress-fill"></div>
+          </div>
+        </div>
+        <div id="hud-inventory" class="hud-inventory" aria-label="Инвентарь артефактов"></div>
+      </div>
+    </header>
+
+    <!-- ===================================================================
+         ЭКРАН 1: СТАРТОВЫЙ ЭКРАН ПРИКЛЮЧЕНИЯ
+         =================================================================== -->
+    <section id="screen-start" class="rpg-card">
+      <div class="hero-header">
+        <div class="hero-badge">🏰 Образовательный RPG-квест • 6 залов • 30 заданий</div>
+        <h1 class="hero-title">Побег из Пиксельного Замка</h1>
+        <p class="hero-subtitle">
+          Пройди 6 залов древней цифровой крепости, реши 30 задач по информатике и программированию на Python,
+          собери коллекцию магических артефактов и набери до <strong>300 баллов</strong>! Никакого таймера — думай спокойно.
+        </p>
+      </div>
+
+      <div class="start-controls-box">
+        <div>
+          <label for="player-name-input" class="field-label">👤 Имя ученика (для сертификата):</label>
+          <input
+            id="player-name-input"
+            type="text"
+            maxlength="40"
+            class="text-input"
+            placeholder="Юный программист"
+            value="Юный программист"
+          />
+        </div>
+
+        <div class="start-actions-row">
+          <button id="start-sound-btn" type="button" class="btn btn-secondary">🔊 Звук: ВКЛ</button>
+          <button id="start-game-btn" type="button" class="btn btn-gold">⚔️ Начать приключение</button>
+        </div>
+      </div>
+
+      <div class="halls-preview-title">🗺️ Карта 6 залов Пиксельного Замка</div>
+      <div class="halls-grid">
+        <div class="hall-info-card">
+          <div class="hall-info-icon">🔑</div>
+          <div>
+            <div class="hall-info-title">1. Зал Двоичных Теней</div>
+            <div class="hall-info-desc">Кодирование и декодирование слов по 5-битному алфавиту (1–32) и перевод чисел.</div>
+          </div>
+        </div>
+        <div class="hall-info-card">
+          <div class="hall-info-icon">🖌️</div>
+          <div>
+            <div class="hall-info-title">2. Мастерская Пикселей</div>
+            <div class="hall-info-desc">Рисование растровых узоров 5×5 по двоичным кодам строк.</div>
+          </div>
+        </div>
+        <div class="hall-info-card">
+          <div class="hall-info-icon">💎</div>
+          <div>
+            <div class="hall-info-title">3. Лаборатория RGB</div>
+            <div class="hall-info-desc">Смешивание световых лучей R, G, B для активации магических кристаллов.</div>
+          </div>
+        </div>
+        <div class="hall-info-card">
+          <div class="hall-info-icon">🧭</div>
+          <div>
+            <div class="hall-info-title">4. Мост Координат</div>
+            <div class="hall-info-desc">Навигация по координатной плоскости 6×6 от (1; 1) до (6; 6).</div>
+          </div>
+        </div>
+        <div class="hall-info-card">
+          <div class="hall-info-icon">📦</div>
+          <div>
+            <div class="hall-info-title">5. Склад Сжатия RLE</div>
+            <div class="hall-info-desc">Упаковка и распаковка цепочек цветных пикселей без потерь.</div>
+          </div>
+        </div>
+        <div class="hall-info-card">
+          <div class="hall-info-icon">🐍</div>
+          <div>
+            <div class="hall-info-title">6. Башня Питона: Код Выхода</div>
+            <div class="hall-info-desc">Чтение скриптов на языке Python: циклы, условия, списки и строки.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         ЭКРАН 2: ИГРОВОЙ ЗАЛ И ВОПРОСЫ (1..5 НА КАЖДОМ ИЗ 6 УРОВНЕЙ)
+         =================================================================== -->
+    <section id="screen-game" class="rpg-card hidden">
+      <div class="level-header">
+        <div>
+          <div id="level-theme-tag" class="theme-tag">Тема: Двоичное кодирование</div>
+          <h2 id="level-title" class="level-title">Уровень 1: Зал Двоичных Теней</h2>
+        </div>
+        <div class="level-reward-pill" title="Решите минимум 3 из 5 вопросов уровня, чтобы получить целый артефакт">
+          <span id="level-reward-icon" style="font-size: 20px;">🔑</span>
+          <span id="level-reward-name">Двоичный ключ</span>
+        </div>
+      </div>
+
+      <!-- Степпер 5 вопросов внутри уровня -->
+      <div class="subq-stepper">
+        <div class="subq-left">
+          <span id="subq-label" class="subq-label">Вопрос 1 из 5</span>
+          <div id="subq-dots" class="subq-dots"></div>
+        </div>
+        <div id="subq-potential-pts" class="subq-points-badge">Ценность: 10 баллов</div>
+      </div>
+
+      <!-- Формулировка вопроса -->
+      <div id="question-prompt" class="question-prompt"></div>
+
+      <!-- Интерактивный тренажёр / виджет уровня -->
+      <div id="question-interactive-area"></div>
+
+      <!-- Панель ввода ответа, проверки и пропуска -->
+      <div class="answer-panel">
+        <label id="answer-input-label" for="answer-input" class="field-label">Ваш ответ:</label>
+        <div class="answer-row">
+          <input
+            id="answer-input"
+            type="text"
+            autocomplete="off"
+            class="text-input"
+            placeholder="Введи ответ..."
+          />
+          <button id="check-answer-btn" type="button" class="btn btn-emerald">✅ Проверить ответ</button>
+          <button id="skip-question-btn" type="button" class="btn btn-skip">⏭️ Пропустить вопрос</button>
+        </div>
+
+        <div id="feedback-banner" class="feedback-banner hidden"></div>
+
+        <!-- Карточка при верном ответе -->
+        <div id="solved-card" class="solved-card hidden">
+          <div class="solved-header">
+            <span class="solved-title">🎉 Верно! Отличная работа!</span>
+            <span id="solved-pts-pill" class="solved-pts-pill">+10 баллов</span>
+          </div>
+          <div id="solved-explanation" class="solved-explanation"></div>
+          <button id="next-question-btn" type="button" class="btn btn-primary">Следующий вопрос →</button>
+        </div>
+
+        <!-- Карточка при пропуске вопроса (правильный ответ не раскрывается) -->
+        <div id="skipped-card" class="skipped-card hidden">
+          <div class="skipped-header">
+            <span class="skipped-title">⏭️ Вопрос пропущен</span>
+            <span class="skipped-pts-pill">0 баллов</span>
+          </div>
+          <div class="solved-explanation">
+            Вопрос пропущен (0 баллов). Правильный ответ остаётся тайной замка — двигаемся дальше!
+          </div>
+          <button id="next-after-skip-btn" type="button" class="btn btn-secondary">Следующий вопрос →</button>
+        </div>
+      </div>
+
+      <!-- Двухшаговые подсказки без раскрытия ответа -->
+      <div class="hints-box">
+        <div class="hints-top-bar">
+          <button id="hint-btn" type="button" class="btn btn-hint">💡 Нужна подсказка? (-2 балла)</button>
+          <span id="hints-counter-label" class="hints-counter">Подсказок использовано: 0 из 2</span>
+        </div>
+        <div id="hints-list"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         ЭКРАН 3: ФИНАЛЬНЫЙ СЕРТИФИКАТ ПОБЕДИТЕЛЯ
+         =================================================================== -->
+    <section id="screen-victory" class="rpg-card hidden">
+      <div class="cert-frame">
+        <div class="hero-badge">🏆 Портал выхода открыт • Сертификат выпускника</div>
+        <div style="font-size: 14px; color: #cbd5e1;">Настоящим подтверждается, что</div>
+        <div id="cert-player-name" class="cert-player-name">Юный программист</div>
+        <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 12px;">
+          успешно прошёл испытание <strong>«Побег из Пиксельного Замка»</strong>
+        </div>
+
+        <div id="cert-total-score" class="cert-big-score">0 из 300 баллов</div>
+        <div id="cert-score-pct" style="font-size: 13px; color: var(--text-muted);">Результат: 0%</div>
+        <div id="cert-grade-badge" class="cert-grade-badge">🏅 Оценка «5+» — Архимаг Python и Кода</div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Решено вопросов</div>
+            <div id="cert-solved-count" class="stat-value" style="color: var(--accent-emerald);">0 / 30</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Пропущено вопросов</div>
+            <div id="cert-skipped-count" class="stat-value" style="color: var(--accent-amber);">0 / 30</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Использовано подсказок</div>
+            <div id="cert-hints-used" class="stat-value" style="color: var(--accent-cyan);">0</div>
+          </div>
+        </div>
+
+        <table class="cert-table">
+          <tbody id="cert-levels-tbody"></tbody>
+        </table>
+
+        <div id="cert-artifacts-grid" class="cert-artifacts-grid"></div>
+
+        <div class="cert-actions-row">
+          <button id="copy-cert-btn" type="button" class="btn btn-emerald">📋 Скопировать результат для учителя</button>
+          <button id="restart-game-btn" type="button" class="btn btn-gold">🔄 Пройти заново</button>
+        </div>
+
+        <div id="copy-toast" class="copy-toast hidden">✅ Результат скопирован в буфер обмена!</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО НАГРАДЫ ПОСЛЕ ЗАВЕРШЕНИЯ КАЖДОГО ИЗ 6 ЗАЛОВ -->
+  <div id="reward-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div id="modal-header-tag" style="font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-emerald); margin-bottom: 10px;">
+        ✨ Зал пройден!
+      </div>
+      <div id="modal-artifact-icon" class="modal-artifact-glow">🔑</div>
+      <h3 id="modal-artifact-name" class="mono" style="font-size: 21px; color: var(--accent-gold); margin-bottom: 8px;">
+        Двоичный ключ
+      </h3>
+      <div id="modal-level-score" class="mono" style="font-size: 13px; color: var(--accent-cyan); font-weight: 700; margin-bottom: 10px;">
+        Решено: 5 из 5 • Баллы: 50 / 50
+      </div>
+      <p id="modal-artifact-desc" style="font-size: 14px; color: #cbd5e1; margin-bottom: 20px;">
+        Описание награды
+      </p>
+      <button id="modal-next-btn" type="button" class="btn btn-primary" style="width: 100%;">
+        Перейти на следующий уровень →
+      </button>
+    </div>
+  </div>
+
+  <!-- Скрытое поле для резервного копирования в буфер обмена -->
+  <textarea id="clipboard-fallback" aria-hidden="true"></textarea>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      'use strict';
+
+      /* =====================================================================
+         1. ЗВУКОВОЙ СИНТЕЗАТОР WEB AUDIO API (ПОЛНОСТЬЮ ЗАЩИЩЁН TRY / CATCH)
+         ===================================================================== */
+      var soundEnabled = true;
+      var audioCtx = null;
+
+      function playSound(type) {
+        if (!soundEnabled) return;
+        try {
+          var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          if (!audioCtx) {
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          var now = audioCtx.currentTime;
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          if (type === 'click') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(520, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+            osc.start(now);
+            osc.stop(now + 0.06);
+          } else if (type === 'hint') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(660, now + 0.08);
+            gain.gain.setValueAtTime(0.07, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.22);
+          } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(190, now);
+            osc.frequency.linearRampToValueAtTime(135, now + 0.2);
+            gain.gain.setValueAtTime(0.07, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.start(now);
+            osc.stop(now + 0.22);
+          } else if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            osc.frequency.setValueAtTime(783.99, now + 0.16);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.32);
+          } else if (type === 'levelup') {
+            osc.type = 'square';
+            var notes = [523.25, 659.25, 783.99, 1046.5];
+            for (var i = 0; i < notes.length; i++) {
+              osc.frequency.setValueAtTime(notes[i], now + i * 0.09);
+            }
+            gain.gain.setValueAtTime(0.07, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            osc.start(now);
+            osc.stop(now + 0.45);
+          } else if (type === 'victory') {
+            osc.type = 'triangle';
+            var fanfare = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+            for (var j = 0; j < fanfare.length; j++) {
+              osc.frequency.setValueAtTime(fanfare[j], now + j * 0.11);
+            }
+            gain.gain.setValueAtTime(0.09, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+            osc.start(now);
+            osc.stop(now + 0.75);
+          }
+        } catch (err) {
+          /* Игнорируем ограничения автовоспроизведения звука в браузере */
+        }
+      }
+
+      function updateSoundButtonsUI() {
+        var label = soundEnabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
+        document.getElementById('start-sound-btn').textContent = label;
+        document.getElementById('hud-sound-btn').textContent = label;
+      }
+
+      function toggleSound() {
+        soundEnabled = !soundEnabled;
+        updateSoundButtonsUI();
+        if (soundEnabled) playSound('click');
+      }
+
+      /* =====================================================================
+         2. УМНАЯ НОРМАЛИЗАЦИЯ И ПРОВЕРКА ОТВЕТОВ (КИРИЛЛИЦА / ЛАТИНИЦА / РЕГИСТР)
+         ===================================================================== */
+      var LOOKALIKE_MAP = {
+        'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'К': 'K',
+        'М': 'M', 'О': 'O', 'Р': 'P', 'Т': 'T', 'Х': 'X', 'У': 'Y'
+      };
+
+      function normalizeCanonical(raw) {
+        var s = String(raw || '').trim().toUpperCase();
+        s = s.replace(/Ё/g, 'Е');
+        // Убираем лишние пробелы, кавычки и дефисы для склеенного сравнения
+        s = s.replace(/[\s"'«»`\-_]+/g, '');
+        var out = '';
+        for (var i = 0; i < s.length; i++) {
+          var ch = s.charAt(i);
+          out += LOOKALIKE_MAP[ch] ? LOOKALIKE_MAP[ch] : ch;
+        }
+        return out;
+      }
+
+      function normalizeCoordinates(raw) {
+        var s = String(raw || '').trim().toUpperCase();
+        // Извлекаем все целые числа (включая отрицательные, если встретятся)
+        var nums = s.match(/-?\d+/g);
+        if (nums && nums.length >= 2) {
+          return nums[0] + ';' + nums[1];
+        }
+        return normalizeCanonical(s);
+      }
+
+      function checkSmartAnswer(userInput, acceptedList, options) {
+        var opts = options || {};
+        if (opts.isCoordinate) {
+          var userCoord = normalizeCoordinates(userInput);
+          for (var c = 0; c < acceptedList.length; c++) {
+            if (userCoord === normalizeCoordinates(acceptedList[c])) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        // Проверка с сохранением одиночных разделителей для пар чисел (например "3 3")
+        if (opts.keepPairSeparator) {
+          var pairNums = String(userInput || '').match(/-?\d+/g);
+          if (pairNums && pairNums.length === 2) {
+            var joinedPair = pairNums[0] + ' ' + pairNums[1];
+            for (var p = 0; p < acceptedList.length; p++) {
+              if (joinedPair === acceptedList[p]) return true;
+            }
+          }
+        }
+
+        var userNorm = normalizeCanonical(userInput);
+        if (!userNorm) return false;
+
+        for (var i = 0; i < acceptedList.length; i++) {
+          if (userNorm === normalizeCanonical(acceptedList[i])) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      /* =====================================================================
+         3. БАЗА ДАННЫХ: 6 УРОВНЕЙ ПО 5 ВОПРОСОВ (30 ЗАДАНИЙ, 300 БАЛЛОВ)
+         ===================================================================== */
+      var RUSSIAN_ALPHABET_32 = [
+        'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З',
+        'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П',
+        'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч',
+        'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я'
+      ];
+
+      var LEVELS = [
+        /* ==================== УРОВЕНЬ 1: ЗАЛ ДВОИЧНЫХ ТЕНЕЙ ==================== */
+        {
+          id: 1,
+          name: 'Уровень 1: Зал Двоичных Теней',
+          shortName: 'Зал Двоичных Теней',
+          theme: 'Двоичное кодирование',
+          rewardIcon: '🔑',
+          rewardName: 'Двоичный ключ',
+          rewardDesc: 'Ты разгадал тайны двоичных кодов! Двоичный ключ добавлен в инвентарь.',
+          questions: [
+            {
+              prompt: 'Расшифруй первое слово замка из трёх 5-битных кодов по таблице алфавита (1–32): <strong class="mono" style="color: var(--accent-gold);">01011 01111 00101</strong>.',
+              widgetType: 'alphaBinary32',
+              cipherCodes: ['01011', '01111', '00101'],
+              hasTextInput: true,
+              inputLabel: 'Введи расшифрованное слово (3 буквы):',
+              inputPlaceholder: 'Введи слово...',
+              accepted: ['КОД', 'KOD', 'CODE'],
+              explanation: 'Отлично! Каждая 5-битная группа переведена в номер буквы по таблице 1–32.',
+              hints: [
+                'Переведи каждую из трёх 5-битных групп в десятичное число, складывая веса (16, 8, 4, 2, 1) только тех позиций, где стоит 1.',
+                'По трём полученным числам найди соответствующие буквы в интерактивной таблице алфавита 1–32 и запиши слово.'
+              ]
+            },
+            {
+              prompt: 'Расшифруй название предмета, открывающего двери замка, по кодам: <strong class="mono" style="color: var(--accent-gold);">01011 01100 11110 11000</strong>.',
+              widgetType: 'alphaBinary32',
+              cipherCodes: ['01011', '01100', '11110', '11000'],
+              hasTextInput: true,
+              inputLabel: 'Введи расшифрованное слово (4 буквы):',
+              inputPlaceholder: 'Введи слово...',
+              accepted: ['КЛЮЧ', 'KLYUCH', 'KLUCH', 'KEY'],
+              explanation: 'Прекрасно! Все 4 двоичных кода безошибочно декодированы по таблице алфавита.',
+              hints: [
+                'Используй битовые кнопки (16 - 8 - 4 - 2 - 1) ниже: включи единицы как в каждом коде, чтобы увидеть номер и букву.',
+                'Собери все четыре найденные буквы подряд в одно существительное из 4 букв.'
+              ]
+            },
+            {
+              prompt: 'Расшифруй название единицы измерения информации (равной 8 битам): <strong class="mono" style="color: var(--accent-gold);">00010 00001 01010 10011</strong>.',
+              widgetType: 'alphaBinary32',
+              cipherCodes: ['00010', '00001', '01010', '10011'],
+              hasTextInput: true,
+              inputLabel: 'Введи расшифрованное слово (4 буквы):',
+              inputPlaceholder: 'Введи слово...',
+              accepted: ['БАЙТ', 'BAJT', 'BAIT', 'BYTE'],
+              explanation: 'Точно в цель! Двоичные группы переведены в десятичные номера и сопоставлены с алфавитом.',
+              hints: [
+                'По очереди набери каждый из четырёх кодов на битовых переключателях (16 - 8 - 4 - 2 - 1).',
+                'Обрати внимание на третью букву (код 01010) — это буква с порядковым номером 10 в таблице.'
+              ]
+            },
+            {
+              prompt: 'Переведи двоичное число <strong class="mono" style="color: var(--accent-gold);">10110₂</strong> в десятичную систему счисления с помощью весов <strong class="mono" style="color: var(--accent-cyan);">16 - 8 - 4 - 2 - 1</strong>.',
+              widgetType: 'alphaBinary32',
+              cipherCodes: [],
+              hasTextInput: true,
+              inputLabel: 'Введи десятичное число:',
+              inputPlaceholder: 'Введи число...',
+              accepted: ['22', 'двадцатьдва', 'twentytwo'],
+              explanation: 'Верно! Сумма битовых весов разрядов с единицами вычислена абсолютно точно.',
+              hints: [
+                'Подпиши над разрядами числа справа налево степени двойки: 1, 2, 4, 8, 16.',
+                'Сложи только те веса разрядов, где в числе 10110 стоит цифра 1 (разряды с 0 пропускаем).'
+              ]
+            },
+            {
+              prompt: 'Теперь выполни обратную задачу: закодируй слово <strong class="mono" style="color: var(--accent-gold);">МИР</strong> в виде трёх 5-битных двоичных кодов по таблице алфавита (1–32).',
+              widgetType: 'alphaBinary32',
+              cipherCodes: [],
+              hasTextInput: true,
+              inputLabel: 'Введи три 5-битных кода (через пробел или слитно):',
+              inputPlaceholder: 'Например: 00001 00010 00011',
+              accepted: ['01101 01001 10001', '011010100110001'],
+              explanation: 'Блестяще! Ты освоил как декодирование, так и кодирование текста в двоичный вид!',
+              hints: [
+                'Кликни по очереди на буквы М, И, Р в таблице алфавита ниже — тренажёр покажет 5-битный код для каждой выбранной буквы.',
+                'Запиши три полученных 5-битных кода подряд в том же порядке (М, затем И, затем Р).'
+              ]
+            }
+          ]
+        },
+
+        /* ==================== УРОВЕНЬ 2: МАСТЕРСКАЯ ПИКСЕЛЕЙ ==================== */
+        {
+          id: 2,
+          name: 'Уровень 2: Мастерская Пикселей',
+          shortName: 'Мастерская Пикселей',
+          theme: 'Растровая графика 5×5',
+          rewardIcon: '🖌️',
+          rewardName: 'Пиксельная кисть',
+          rewardDesc: 'Ты освоил кодирование растровой графики! Пиксельная кисть твоя.',
+          questions: [
+            {
+              prompt: 'Закрась пиксели на сетке <strong class="mono">5×5</strong> по двоичному коду (<strong class="mono">1</strong> — чёрный пиксель, <strong class="mono">0</strong> — белый), чтобы проявилась первая буква замка.',
+              widgetType: 'pixelGrid',
+              targetRows: ['10010', '10100', '11000', '10100', '10010'],
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить рисунок',
+              explanation: 'Отлично! Растровый узор буквы полностью совпал с двоичной матрицей 5×5.',
+              hints: [
+                'В каждой строке цифра 1 означает тёмный закрашенный пиксель, а цифра 0 — пустой светлый.',
+                'Проходи по строкам сверху вниз: нажимай на те клетки столбцов (с 1-го по 5-й), где в коде строки стоит 1.'
+              ]
+            },
+            {
+              prompt: 'Закрась пиксели на сетке <strong class="mono">5×5</strong> по коду строк, чтобы проявить второй символ мастерской.',
+              widgetType: 'pixelGrid',
+              targetRows: ['11111', '10001', '10001', '10001', '10001'],
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить рисунок',
+              explanation: 'Прекрасно! Верхняя перекладина и две вертикальные опоры выложены безошибочно.',
+              hints: [
+                'В первой строке все пять цифр равны 1 — закрась верхнюю строку целиком.',
+                'Во всех строках со 2-й по 5-ю единицы стоят только по краям (в 1-м и 5-м столбцах).'
+              ]
+            },
+            {
+              prompt: 'Выложи на сетке <strong class="mono">5×5</strong> симметричный знак мастерской по двоичному коду строк.',
+              widgetType: 'pixelGrid',
+              targetRows: ['00100', '00100', '11111', '00100', '00100'],
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить рисунок',
+              explanation: 'Точно в цель! Вертикальная и горизонтальная линии пересеклись ровно по центру.',
+              hints: [
+                'Узор состоит из одной сплошной горизонтальной линии и одной вертикальной посередине.',
+                'Закрась полностью 3-ю строку (11111), а в остальных строках нажми только на центральную клетку (3-й столбец).'
+              ]
+            },
+            {
+              prompt: 'Закрась пиксели на сетке <strong class="mono">5×5</strong> по коду строк, чтобы проявить тайную цифру.',
+              widgetType: 'pixelGrid',
+              targetRows: ['11111', '00010', '00100', '01000', '01000'],
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить рисунок',
+              explanation: 'Верно! Каждый пиксель матрицы стоит на своём месте.',
+              hints: [
+                'Первая строка (11111) закрашивается целиком, а далее единица смещается по диагонали вниз.',
+                'Сравни свой текущий код строк справа со списком целевых кодов — подсвеченные зелёным строки уже верны!'
+              ]
+            },
+            {
+              prompt: 'Финальный шедевр мастерской: выложи на сетке <strong class="mono">5×5</strong> пиксельный символ жизни.',
+              widgetType: 'pixelGrid',
+              targetRows: ['01010', '11111', '11111', '01110', '00100'],
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить рисунок',
+              explanation: 'Браво! Все пять растровых матриц в Мастерской Пикселей освоены!',
+              hints: [
+                'В 1-й строке закрась 2-й и 4-й пиксели, а 2-ю и 3-ю строки заполни полностью.',
+                'В 4-й строке закрась три средние клетки (01110), а в 5-й — только самую нижнюю центральную (00100).'
+              ]
+            }
+          ]
+        },
+
+        /* ==================== УРОВЕНЬ 3: ЛАБОРАТОРИЯ RGB ==================== */
+        {
+          id: 3,
+          name: 'Уровень 3: Лаборатория RGB',
+          shortName: 'Лаборатория RGB',
+          theme: 'Цветовая модель RGB',
+          rewardIcon: '💎',
+          rewardName: 'Призма RGB',
+          rewardDesc: 'Ты покорил законы световых волн! Призма RGB добавлена в инвентарь.',
+          questions: [
+            {
+              prompt: 'Настрой ползунки каналов <strong class="mono">R, G, B</strong> так, чтобы кристалл засветился ярким <strong style="color: var(--accent-gold);">ЖЁЛТЫМ</strong> светом (R ≥ 210, G ≥ 210, B ≤ 60).',
+              widgetType: 'rgbLab',
+              rgbTarget: 'yellow',
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить свет кристалла',
+              explanation: 'Верно! В аддитивной модели RGB сложение красного (R) и зелёного (G) лучей создаёт яркий жёлтый свет.',
+              hints: [
+                'В световой модели RGB жёлтый оттенок образуется при смешивании красного и зелёного лучей без синего.',
+                'Увеличь каналы R и G не ниже 210, а синий канал B опусти не выше 60.'
+              ]
+            },
+            {
+              prompt: 'Теперь настрой ползунки так, чтобы кристалл засветился ярким <strong style="color: var(--accent-cyan);">ГОЛУБЫМ (Cyan)</strong> лучом (R ≤ 60, G ≥ 210, B ≥ 210).',
+              widgetType: 'rgbLab',
+              rgbTarget: 'cyan',
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить свет кристалла',
+              explanation: 'Отлично! Зелёный (G) и синий (B) каналы при выключенном красном (R) дают чистый голубой свет.',
+              hints: [
+                'Голубой (бирюзовый) свет получается при сложении зелёного и синего световых потоков.',
+                'Уменьши красный ползунок R до 60 или ниже, а каналы G и B подними до 210 или выше.'
+              ]
+            },
+            {
+              prompt: 'Активируй третий кристалл: настрой яркий <strong style="color: #e879f9;">ПУРПУРНЫЙ (Magenta)</strong> луч (R ≥ 210, G ≤ 60, B ≥ 210).',
+              widgetType: 'rgbLab',
+              rgbTarget: 'magenta',
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить свет кристалла',
+              explanation: 'Прекрасно! Сложение красного (R) и синего (B) лучей без зелёного (G) рождает пурпурный оттенок.',
+              hints: [
+                'Пурпурный оттенок образуется при сочетании красного и синего лучей без зелёного.',
+                'Подними ползунки R и B не ниже 210, а зелёный канал G опусти не выше 60.'
+              ]
+            },
+            {
+              prompt: 'Настрой максимальную яркость всех трёх каналов, чтобы получить чистый <strong style="color: #ffffff;">БЕЛЫЙ</strong> свет (R ≥ 235, G ≥ 235, B ≥ 235).',
+              widgetType: 'rgbLab',
+              rgbTarget: 'white',
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить свет кристалла',
+              explanation: 'Точно! При максимальной мощности всех трёх световых каналов RGB получается чистый белый цвет.',
+              hints: [
+                'Модель RGB описывает излучение света: когда все три цветных луча светят на максимум, они сливаются в белый.',
+                'Передвинь все три ползунка (R, G и B) вправо до значений от 235 до 255.'
+              ]
+            },
+            {
+              prompt: 'Финальный спектр: смешай тёплый <strong style="color: #fb923c;">ОРАНЖЕВЫЙ</strong> огонь кристалла (R ≥ 220, G от 100 до 185, B ≤ 50).',
+              widgetType: 'rgbLab',
+              rgbTarget: 'orange',
+              hasTextInput: false,
+              checkBtnText: '✅ Проверить свет кристалла',
+              explanation: 'Браво! Все пять оптических кристаллов Лаборатории RGB настроены безупречно!',
+              hints: [
+                'Оранжевый оттенок находится между красным и жёлтым: красного света должно быть много, а зелёного — примерно вполовину меньше.',
+                'Установи R ≥ 220, B ≤ 50, а ползунок G поставь в средний диапазон от 100 до 185.'
+              ]
+            }
+          ]
+        },
+
+        /* ==================== УРОВЕНЬ 4: МОСТ КООРДИНАТ ==================== */
+        {
+          id: 4,
+          name: 'Уровень 4: Мост Координат',
+          shortName: 'Мост Координат',
+          theme: 'Координатная плоскость 6×6',
+          rewardIcon: '🧭',
+          rewardName: 'Компас координат',
+          rewardDesc: 'Ты безошибочно провёл рыцаря по координатам! Компас координат твой.',
+          questions: [
+            {
+              prompt: 'На координатной сетке <strong class="mono">6×6</strong> (ось X слева направо, ось Y снизу вверх) нажми на безопасную плиту <strong class="mono" style="color: var(--accent-gold);">(4; 3)</strong> или впиши координаты ниже.',
+              widgetType: 'coordGrid',
+              knightPos: null,
+              hasTextInput: true,
+              isCoordinate: true,
+              inputLabel: 'Координаты плиты (X; Y):',
+              inputPlaceholder: 'Формат: X; Y',
+              accepted: ['4;3'],
+              explanation: 'Отлично! Пересечение нужного столбца X и строки Y найдено безошибочно.',
+              hints: [
+                'Первое число в скобках — координата X (столбец слева направо), второе — координата Y (строка снизу вверх).',
+                'Найди внизу столбец X = 4, затем поднимись по нему вверх до строки Y = 3 и нажми на эту плиту.'
+              ]
+            },
+            {
+              prompt: 'Второй шаг по мосту: выбери на сетке плиту с координатами <strong class="mono" style="color: var(--accent-gold);">(2; 6)</strong> или введи их вручную.',
+              widgetType: 'coordGrid',
+              knightPos: null,
+              hasTextInput: true,
+              isCoordinate: true,
+              inputLabel: 'Координаты второй плиты (X; Y):',
+              inputPlaceholder: 'Формат: X; Y',
+              accepted: ['2;6'],
+              explanation: 'Верно! Верхний ряд координатной сетки покорён.',
+              hints: [
+                'Отсчитай 2 столбца слева направо по оси X и поднимись на самый верхний ряд по оси Y.',
+                'Нажми на клетку во втором столбце самой верхней строки сетки.'
+              ]
+            },
+            {
+              prompt: 'Укажи плиту башни-близнеца, у которой обе координаты равны <strong class="mono" style="color: var(--accent-gold);">5</strong> (то есть X = 5 и Y = 5).',
+              widgetType: 'coordGrid',
+              knightPos: null,
+              hasTextInput: true,
+              isCoordinate: true,
+              inputLabel: 'Координаты башни (X; Y):',
+              inputPlaceholder: 'Формат: X; Y',
+              accepted: ['5;5'],
+              explanation: 'Точно в цель! Диагональная точка (5; 5) найдена верно.',
+              hints: [
+                'В записи (X; Y) на первое место ставится координата X, а на второе — координата Y.',
+                'Найди пересечение 5-го столбца и 5-й строки снизу на координатной сетке.'
+              ]
+            },
+            {
+              prompt: 'Рыцарь стоит в точке <strong class="mono" style="color: var(--accent-cyan);">(3; 2)</strong>. Он сделал <strong style="color: var(--accent-gold);">3 шага вправо</strong> (по оси X), не меняя высоты Y. Выбери его новую плиту.',
+              widgetType: 'coordGrid',
+              knightPos: { x: 3, y: 2 },
+              hasTextInput: true,
+              isCoordinate: true,
+              inputLabel: 'Новые координаты рыцаря (X; Y):',
+              inputPlaceholder: 'Формат: X; Y',
+              accepted: ['6;2'],
+              explanation: 'Прекрасно! Движение вправо увеличивает координату X на количество шагов.',
+              hints: [
+                'Движение вправо увеличивает первую координату (X), а вторая координата (Y) остаётся прежней.',
+                'Прибавь количество шагов вправо к исходному значению X и выбери клетку на той же высоте Y.'
+              ]
+            },
+            {
+              prompt: 'Финальный прыжок: от точки <strong class="mono" style="color: var(--accent-cyan);">(6; 2)</strong> рыцарь переместился на <strong style="color: var(--accent-gold);">5 шагов влево</strong> (по X) и <strong style="color: var(--accent-gold);">2 шага вверх</strong> (по Y). Укажи плиту выхода.',
+              widgetType: 'coordGrid',
+              knightPos: { x: 6, y: 2 },
+              hasTextInput: true,
+              isCoordinate: true,
+              inputLabel: 'Координаты плиты выхода (X; Y):',
+              inputPlaceholder: 'Формат: X; Y',
+              accepted: ['1;4'],
+              explanation: 'Браво! Мост Координат пройден от начала до конца!',
+              hints: [
+                'Движение влево уменьшает координату X (вычитание), а движение вверх увеличивает координату Y (сложение).',
+                'Вычти 5 из координаты X и прибавь 2 к координате Y, затем кликни по полученной клетке.'
+              ]
+            }
+          ]
+        },
+
+        /* ==================== УРОВЕНЬ 5: СКЛАД СЖАТИЯ RLE ==================== */
+        {
+          id: 5,
+          name: 'Уровень 5: Склад Сжатия RLE',
+          shortName: 'Склад Сжатия RLE',
+          theme: 'Алгоритм сжатия RLE',
+          rewardIcon: '📦',
+          rewardName: 'Архиватор RLE',
+          rewardDesc: 'Все свитки сжаты и упорядочены! Архиватор RLE добавлен в инвентарь.',
+          questions: [
+            {
+              prompt: 'Сожми цепочку пикселей методом <strong class="mono">RLE</strong> (формат: &lt;количество&gt;&lt;буква&gt; без пробелов): <strong class="mono" style="color: var(--accent-gold);">ЧЧЧББЧЧЧЧ</strong>.',
+              widgetType: 'rleStrip',
+              items: [
+                { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' },
+                { ch: 'Б', cls: 'white' }, { ch: 'Б', cls: 'white' },
+                { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Сжатый RLE-код:',
+              inputPlaceholder: 'Формат: 2А3Б...',
+              accepted: ['3Ч2Б4Ч', '3C2B4C', '3CH2B4CH'],
+              explanation: 'Отлично! Серии повторяющихся пикселей упакованы методом RLE без потерь.',
+              hints: [
+                'Алгоритм RLE заменяет каждую непрерывную серию одинаковых букв на пару: <число повторов><буква>.',
+                'Посчитай количество пикселей в каждой из трёх однородных групп слева направо и запиши пары слитно.'
+              ]
+            },
+            {
+              prompt: 'Сожми вторую цветовую ленту методом <strong class="mono">RLE</strong>: <strong class="mono" style="color: var(--accent-gold);">ККККСССКК</strong> (К — красный, С — синий).',
+              widgetType: 'rleStrip',
+              items: [
+                { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' },
+                { ch: 'С', cls: 'blue' }, { ch: 'С', cls: 'blue' }, { ch: 'С', cls: 'blue' },
+                { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Сжатый RLE-код:',
+              inputPlaceholder: 'Формат: 2К3С...',
+              accepted: ['4К3С2К', '4K3S2K', '4K3C2K'],
+              explanation: 'Верно! Цветовая полоса успешно сжата в компактный код.',
+              hints: [
+                'Разбей ленту на три группы одинаковых цветов подряд: сначала красные, затем синие, затем снова красные.',
+                'Перед буквой каждой группы поставь количество блоков в ней и запиши без пробелов.'
+              ]
+            },
+            {
+              prompt: 'Теперь выполни обратную операцию: распакуй исходную строку из сжатого RLE-кода <strong class="mono" style="color: var(--accent-gold);">2Б3Ч1Б</strong>.',
+              widgetType: 'formulaCard',
+              formulaChips: ['[ N·Буква ] → повторить букву N раз', 'Записать результат слитно'],
+              hasTextInput: true,
+              inputLabel: 'Распакованная строка без пробелов:',
+              inputPlaceholder: 'Введи цепочку букв...',
+              accepted: ['ББЧЧЧБ', 'BBCHCHCHB', 'BBCCCB'],
+              explanation: 'Точно! Декодирование RLE восстановило исходную последовательность пикселей.',
+              hints: [
+                'При распаковке число перед буквой показывает, сколько раз подряд нужно написать эту букву.',
+                'Раскрой по порядку три группы (2Б, затем 3Ч, затем 1Б) и запиши все буквы слитно.'
+              ]
+            },
+            {
+              prompt: 'Исходная строка <strong class="mono" style="color: var(--accent-gold);">АААААББББВВ</strong> состоит из <strong class="mono">11</strong> символов, а её сжатый RLE-код <strong class="mono" style="color: var(--accent-cyan);">5А4Б2В</strong> — из <strong class="mono">6</strong> символов. На сколько символов сжатая запись короче исходной?',
+              widgetType: 'formulaCard',
+              formulaChips: ['Исходная длина: 11 симв.', 'Сжатая длина: 6 симв.', 'Экономия = Исходная − Сжатая'],
+              hasTextInput: true,
+              inputLabel: 'На сколько символов короче?',
+              inputPlaceholder: 'Введи число...',
+              accepted: ['5', 'пять', 'five', 'на5'],
+              explanation: 'Верно! Сжатие сэкономило 5 символов памяти.',
+              hints: [
+                'Чтобы узнать, на сколько одна строка короче другой, нужно из большей длины вычесть меньшую.',
+                'Вычти длину сжатой записи из длины исходной строки.'
+              ]
+            },
+            {
+              prompt: 'Финальный свиток склада: сожми цепочку пикселей <strong class="mono" style="color: var(--accent-gold);">БББББЧЧККК</strong> методом <strong class="mono">RLE</strong>.',
+              widgetType: 'rleStrip',
+              items: [
+                { ch: 'Б', cls: 'white' }, { ch: 'Б', cls: 'white' }, { ch: 'Б', cls: 'white' }, { ch: 'Б', cls: 'white' }, { ch: 'Б', cls: 'white' },
+                { ch: 'Ч', cls: 'black' }, { ch: 'Ч', cls: 'black' },
+                { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' }, { ch: 'К', cls: 'red' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Сжатый RLE-код:',
+              inputPlaceholder: 'Формат: 2Б3Ч...',
+              accepted: ['5Б2Ч3К', '5B2C3K', '5B2CH3K'],
+              explanation: 'Браво! Все пять задач Склада Сжатия RLE выполнены безупречно!',
+              hints: [
+                'Посчитай количество белых (Б), затем чёрных (Ч), затем красных (К) пикселей.',
+                'Запиши три пары <количество><буква> подряд без пробелов.'
+              ]
+            }
+          ]
+        },
+
+        /* ==================== УРОВЕНЬ 6: БАШНЯ ПИТОНА: КОД ВЫХОДА ==================== */
+        {
+          id: 6,
+          name: 'Уровень 6: Башня Питона: Код Выхода',
+          shortName: 'Башня Питона: Код Выхода',
+          theme: 'Программирование на Python',
+          rewardIcon: '🐍',
+          rewardName: 'Жезл Питона',
+          rewardDesc: 'Ты взломал скрипты на Python и открыл портал выхода! Жезл Питона твой!',
+          questions: [
+            {
+              prompt: 'Изучи первый скрипт на языке <strong style="color: var(--accent-cyan);">Python</strong> и впиши, что выведет на экран команда <strong class="mono">print</strong>:',
+              widgetType: 'pythonCode',
+              lines: [
+                { num: 1, code: '<span class="tok-var">word</span> <span class="tok-op">=</span> <span class="tok-str">"PY"</span>' },
+                { num: 2, code: '<span class="tok-var">num</span> <span class="tok-op">=</span> <span class="tok-num">4</span>' },
+                { num: 3, code: '<span class="tok-kw">for</span> <span class="tok-var">i</span> <span class="tok-kw">in</span> <span class="tok-fn">range</span>(<span class="tok-num">3</span>):' },
+                { num: 4, code: '    <span class="tok-var">num</span> <span class="tok-op">=</span> <span class="tok-var">num</span> <span class="tok-op">+</span> <span class="tok-num">2</span>' },
+                { num: 5, code: '<span class="tok-fn">print</span>(<span class="tok-var">word</span> <span class="tok-op">+</span> <span class="tok-fn">str</span>(<span class="tok-var">num</span>))' }
+              ],
+              docs: [
+                { key: 'd1', line: 3, title: 'for i in range(3):', text: 'Цикл со счётчиком: повторяет команду с отступом ровно 3 раза (для i = 0, 1, 2).' },
+                { key: 'd2', line: 4, title: 'num = num + 2', text: 'На каждом шаге цикла увеличивает текущее значение переменной num на 2.' },
+                { key: 'd3', line: 5, title: 'str(num)', text: 'Преобразует число в строку, чтобы склеить её со строкой word знаком +.' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Результат работы программы:',
+              inputPlaceholder: 'Введи вывод программы...',
+              accepted: ['PY10', 'РУ10'],
+              explanation: 'Отлично! Цикл выполнился 3 раза, а функция str() позволила объединить строку и число.',
+              hints: [
+                'Проследи, сколько раз выполнится цикл for i in range(3): и как на каждом шаге изменится переменная num.',
+                'Функция str() превращает итоговое число в текст, а оператор + склеивает две строки вплотную без пробелов.'
+              ]
+            },
+            {
+              prompt: 'Что напечатает эта программа при передаче двух переменных в функцию <strong class="mono">print(a, b)</strong> (через пробел)?',
+              widgetType: 'pythonCode',
+              lines: [
+                { num: 1, code: '<span class="tok-var">a</span> <span class="tok-op">=</span> <span class="tok-num">3</span>' },
+                { num: 2, code: '<span class="tok-var">b</span> <span class="tok-op">=</span> <span class="tok-var">a</span>' },
+                { num: 3, code: '<span class="tok-fn">print</span>(<span class="tok-var">a</span>, <span class="tok-var">b</span>)' }
+              ],
+              docs: [
+                { key: 'd1', line: 2, title: 'b = a', text: 'Присваивание копирует текущее значение переменной a в переменную b.' },
+                { key: 'd2', line: 3, title: 'print(a, b)', text: 'При перечислении аргументов через запятую print() выводит их через один пробел.' }
+              ],
+              hasTextInput: true,
+              keepPairSeparator: true,
+              inputLabel: 'Что выведет программа (два числа через пробел)?',
+              inputPlaceholder: 'Например: 1 2',
+              accepted: ['3 3'],
+              explanation: 'Верно! Переменная b получила копию значения a, и print вывел оба числа через пробел.',
+              hints: [
+                'Команда b = a записывает в переменную b такое же число, которое хранится в переменной a.',
+                'Функция print(a, b) выводит значения обеих переменных в одну строку через пробел.'
+              ]
+            },
+            {
+              prompt: 'Какое число выведет программа с условным оператором <strong class="mono" style="color: var(--accent-gold);">if / else</strong>?',
+              widgetType: 'pythonCode',
+              lines: [
+                { num: 1, code: '<span class="tok-var">x</span> <span class="tok-op">=</span> <span class="tok-num">4</span>' },
+                { num: 2, code: '<span class="tok-kw">if</span> <span class="tok-var">x</span> <span class="tok-op">&lt;</span> <span class="tok-num">5</span>:' },
+                { num: 3, code: '    <span class="tok-var">x</span> <span class="tok-op">=</span> <span class="tok-var">x</span> <span class="tok-op">*</span> <span class="tok-num">2</span> <span class="tok-op">+</span> <span class="tok-num">1</span>' },
+                { num: 4, code: '<span class="tok-kw">else</span>:' },
+                { num: 5, code: '    <span class="tok-var">x</span> <span class="tok-op">=</span> <span class="tok-var">x</span> <span class="tok-op">-</span> <span class="tok-num">2</span>' },
+                { num: 6, code: '<span class="tok-fn">print</span>(<span class="tok-var">x</span>)' }
+              ],
+              docs: [
+                { key: 'd1', line: 2, title: 'if x < 5:', text: 'Проверка условия: если x меньше 5, выполняется строка с отступом под if.' },
+                { key: 'd2', line: 3, title: 'x * 2 + 1', text: 'Сначала выполняется умножение (*), а затем сложение (+).' },
+                { key: 'd3', line: 4, title: 'else:', text: 'Ветка «иначе» срабатывает только если условие в if ложно.' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Какое число напечатает print(x)?',
+              inputPlaceholder: 'Введи число...',
+              accepted: ['9', 'девять', 'nine'],
+              explanation: 'Точно! Истинное условие направило выполнение программы по ветке if.',
+              hints: [
+                'Проверь, истинно ли условие x < 5 для исходного значения переменной x.',
+                'Если условие верно, выполни вычисление в строке 3 (сначала умножение на 2, потом прибавление 1), а ветку else пропусти.'
+              ]
+            },
+            {
+              prompt: 'Что выведет программа при работе со списком <strong class="mono">tags</strong> и функцией длины <strong class="mono">len()</strong>?',
+              widgetType: 'pythonCode',
+              lines: [
+                { num: 1, code: '<span class="tok-var">tags</span> <span class="tok-op">=</span> [<span class="tok-str">"GO"</span>, <span class="tok-str">"CT"</span>, <span class="tok-str">"END"</span>]' },
+                { num: 2, code: '<span class="tok-var">code</span> <span class="tok-op">=</span> <span class="tok-var">tags</span>[<span class="tok-num">1</span>] <span class="tok-op">+</span> <span class="tok-fn">str</span>(<span class="tok-fn">len</span>(<span class="tok-var">tags</span>) <span class="tok-op">*</span> <span class="tok-num">2</span>)' },
+                { num: 3, code: '<span class="tok-fn">print</span>(<span class="tok-var">code</span>)' }
+              ],
+              docs: [
+                { key: 'd1', line: 1, title: 'tags[1]', text: 'Нумерация элементов списка в Python начинается с 0: индекс 0 — первый элемент, индекс 1 — второй.' },
+                { key: 'd2', line: 2, title: 'len(tags)', text: 'Функция len() возвращает количество элементов в списке.' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Результат работы программы:',
+              inputPlaceholder: 'Введи вывод программы...',
+              accepted: ['CT6', 'СТ6'],
+              explanation: 'Отлично! Индексация списка с нуля и функция len() применены правильно.',
+              hints: [
+                'В Python элементы списка нумеруются с нуля (0, 1, 2), поэтому tags[1] берёт второй элемент списка.',
+                'Умножь количество элементов списка len(tags) на 2, переведи в строку через str() и приклей справа к tags[1].'
+              ]
+            },
+            {
+              prompt: 'Финальный пароль портала! Изучи цикл <strong class="mono" style="color: var(--accent-gold);">while</strong> и впиши результат вывода:',
+              widgetType: 'pythonCode',
+              lines: [
+                { num: 1, code: '<span class="tok-var">key</span> <span class="tok-op">=</span> <span class="tok-num">1</span>' },
+                { num: 2, code: '<span class="tok-kw">while</span> <span class="tok-var">key</span> <span class="tok-op">&lt;</span> <span class="tok-num">10</span>:' },
+                { num: 3, code: '    <span class="tok-var">key</span> <span class="tok-op">=</span> <span class="tok-var">key</span> <span class="tok-op">*</span> <span class="tok-num">2</span>' },
+                { num: 4, code: '<span class="tok-fn">print</span>(<span class="tok-str">"KEY"</span> <span class="tok-op">+</span> <span class="tok-fn">str</span>(<span class="tok-var">key</span>))' }
+              ],
+              docs: [
+                { key: 'd1', line: 2, title: 'while key < 10:', text: 'Цикл «пока»: повторяется до тех пор, пока значение key строго меньше 10.' },
+                { key: 'd2', line: 3, title: 'key = key * 2', text: 'На каждом шаге цикла значение key удваивается.' }
+              ],
+              hasTextInput: true,
+              inputLabel: 'Финальный код портала:',
+              inputPlaceholder: 'Введи вывод программы...',
+              accepted: ['KEY16', 'КЕУ16', 'КЕЙ16'],
+              explanation: 'Браво! Цикл while остановился на первом значении ≥ 10, и портал выхода открыт!',
+              hints: [
+                'Проследи, как меняется переменная key при каждом удвоении: 1 → 2 → 4 → ... Пока число меньше 10, цикл продолжается.',
+                'Как только key станет больше или равно 10, цикл завершится, и это число приклеится к строке "KEY".'
+              ]
+            }
+          ]
+        }
+      ];
+
+      /* =====================================================================
+         4. СОСТОЯНИЕ ИГРЫ И ФУНКЦИИ ПОДСЧЁТА БАЛЛОВ
+         ===================================================================== */
+      function createInitialProgress() {
+        var progress = [];
+        for (var l = 0; l < 6; l++) {
+          var qArr = [];
+          for (var q = 0; q < 5; q++) {
+            qArr.push({
+              solved: false,
+              skipped: false,
+              pointsEarned: 0,
+              hintsUsed: 0,
+              wrongAttempts: 0
+            });
+          }
+          progress.push(qArr);
+        }
+        return progress;
+      }
+
+      var state = {
+        playerName: 'Юный программист',
+        levelIdx: 0,
+        questionIdx: 0,
+        progress: createInitialProgress(),
+        skipConfirmArmed: false,
+        // Локальные состояния интерактивных виджетов текущего вопроса
+        alphaSelectedNum: null,
+        bin5Bits: [0, 0, 0, 0, 0],
+        pixelGrid: [
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0]
+        ],
+        pixelSolvedVisual: false,
+        rgb: { r: 60, g: 90, b: 200 },
+        coordSelected: null,
+        pyActiveDoc: null
+      };
+
+      function getTotalScore() {
+        var total = 0;
+        for (var l = 0; l < state.progress.length; l++) {
+          for (var q = 0; q < state.progress[l].length; q++) {
+            total += state.progress[l][q].pointsEarned;
+          }
+        }
+        return total;
+      }
+
+      function getLevelScore(lIdx) {
+        var sum = 0;
+        for (var q = 0; q < state.progress[lIdx].length; q++) {
+          sum += state.progress[lIdx][q].pointsEarned;
+        }
+        return sum;
+      }
+
+      function getLevelSolvedCount(lIdx) {
+        var cnt = 0;
+        for (var q = 0; q < state.progress[lIdx].length; q++) {
+          if (state.progress[lIdx][q].solved) cnt++;
+        }
+        return cnt;
+      }
+
+      function getLevelArtifactTier(lIdx) {
+        var s = getLevelSolvedCount(lIdx);
+        if (s >= 3) return 'full';
+        if (s >= 1) return 'shard';
+        return 'locked';
+      }
+
+      function getSolvedQuestionsCount() {
+        var cnt = 0;
+        for (var l = 0; l < state.progress.length; l++) {
+          for (var q = 0; q < state.progress[l].length; q++) {
+            if (state.progress[l][q].solved) cnt++;
+          }
+        }
+        return cnt;
+      }
+
+      function getSkippedQuestionsCount() {
+        var cnt = 0;
+        for (var l = 0; l < state.progress.length; l++) {
+          for (var q = 0; q < state.progress[l].length; q++) {
+            if (state.progress[l][q].skipped) cnt++;
+          }
+        }
+        return cnt;
+      }
+
+      function getCompletedQuestionsCount() {
+        return getSolvedQuestionsCount() + getSkippedQuestionsCount();
+      }
+
+      function getTotalHintsCount() {
+        var cnt = 0;
+        for (var l = 0; l < state.progress.length; l++) {
+          for (var q = 0; q < state.progress[l].length; q++) {
+            cnt += state.progress[l][q].hintsUsed;
+          }
+        }
+        return cnt;
+      }
+
+      function calcCurrentPotentialPoints(qState) {
+        var hintPenalty = 0;
+        if (qState.hintsUsed === 1) hintPenalty = 2;
+        else if (qState.hintsUsed >= 2) hintPenalty = 5;
+        var raw = 10 - hintPenalty - qState.wrongAttempts;
+        return Math.max(2, raw);
+      }
+
+      function getGradeAndRank(score) {
+        if (score >= 270) return 'Оценка «5+» — Архимаг Python и Кода';
+        if (score >= 225) return 'Оценка «5» — Мастер Пиксельного Замка';
+        if (score >= 165) return 'Оценка «4» — Опытный Киберследопыт';
+        if (score >= 100) return 'Оценка «3» — Настойчивый Искатель';
+        return 'Зачёт за участие — Попробуй пройти ещё раз!';
+      }
+
+      function resetSkipConfirm() {
+        state.skipConfirmArmed = false;
+        var skipBtn = document.getElementById('skip-question-btn');
+        if (skipBtn) {
+          skipBtn.textContent = '⏭️ Пропустить вопрос';
+          skipBtn.classList.remove('confirming');
+        }
+      }
+
+      /* =====================================================================
+         5. УПРАВЛЕНИЕ ЭКРАНАМИ И ОБНОВЛЕНИЕ HUD
+         ===================================================================== */
+      var elHud = document.getElementById('hud-bar');
+      var elScreenStart = document.getElementById('screen-start');
+      var elScreenGame = document.getElementById('screen-game');
+      var elScreenVictory = document.getElementById('screen-victory');
+
+      function showScreen(name) {
+        elScreenStart.classList.add('hidden');
+        elScreenGame.classList.add('hidden');
+        elScreenVictory.classList.add('hidden');
+
+        if (name === 'start') {
+          elHud.classList.add('hidden');
+          elScreenStart.classList.remove('hidden');
+        } else if (name === 'game') {
+          elHud.classList.remove('hidden');
+          elScreenGame.classList.remove('hidden');
+        } else if (name === 'victory') {
+          elHud.classList.add('hidden');
+          elScreenVictory.classList.remove('hidden');
+        }
+      }
+
+      function updateHUD(animateScore) {
+        var completedTotal = getCompletedQuestionsCount();
+        var pct = Math.round((completedTotal / 30) * 100);
+        var score = getTotalScore();
+
+        document.getElementById('hud-hall-badge').textContent =
+          '🏰 ' + LEVELS[state.levelIdx].shortName;
+        document.getElementById('hud-progress-pct').textContent =
+          completedTotal + ' / 30 (' + pct + '%)';
+        document.getElementById('hud-progress-bar').style.width = pct + '%';
+
+        var scoreValEl = document.getElementById('hud-score-val');
+        var scorePillEl = document.getElementById('hud-score-pill');
+        scoreValEl.textContent = score + ' / 300';
+        if (animateScore) {
+          scorePillEl.classList.remove('bump');
+          void scorePillEl.offsetWidth;
+          scorePillEl.classList.add('bump');
+        }
+
+        var invContainer = document.getElementById('hud-inventory');
+        invContainer.innerHTML = '';
+        for (var i = 0; i < LEVELS.length; i++) {
+          var slot = document.createElement('div');
+          var tier = getLevelArtifactTier(i);
+          var sCount = getLevelSolvedCount(i);
+          if (tier === 'full') {
+            slot.className = 'inv-slot unlocked';
+            slot.title = 'Артефакт: ' + LEVELS[i].rewardName + ' (решено ' + sCount + '/5)';
+            slot.textContent = LEVELS[i].rewardIcon;
+          } else if (tier === 'shard') {
+            slot.className = 'inv-slot shard';
+            slot.title = 'Осколок: ' + LEVELS[i].rewardName + ' (решено ' + sCount + '/5)';
+            slot.textContent = '✨';
+          } else {
+            slot.className = 'inv-slot';
+            slot.title = LEVELS[i].rewardName + ' (нужно ≥ 3 из 5)';
+            slot.textContent = '🔒';
+          }
+          invContainer.appendChild(slot);
+        }
+      }
+
+      function showFeedback(text, kind) {
+        var banner = document.getElementById('feedback-banner');
+        banner.textContent = text;
+        banner.className = 'feedback-banner ' + (kind || 'error');
+        banner.classList.remove('hidden');
+      }
+
+      function hideFeedback() {
+        document.getElementById('feedback-banner').classList.add('hidden');
+      }
+
+      /* =====================================================================
+         6. ОТРИСОВКА ТЕКУЩЕГО ВОПРОСА И ИНТЕРАКТИВНЫХ ТРЕНАЖЁРОВ
+         ===================================================================== */
+      function resetWidgetLocals() {
+        state.alphaSelectedNum = null;
+        state.bin5Bits = [0, 0, 0, 0, 0];
+        state.pixelGrid = [
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0]
+        ];
+        state.pixelSolvedVisual = false;
+        state.rgb = { r: 60, g: 90, b: 200 };
+        state.coordSelected = null;
+        state.pyActiveDoc = null;
+      }
+
+      function updatePotentialPointsBadge() {
+        var qState = state.progress[state.levelIdx][state.questionIdx];
+        var badge = document.getElementById('subq-potential-pts');
+        if (qState.solved) {
+          badge.textContent = 'Получено: +' + qState.pointsEarned + ' баллов';
+        } else if (qState.skipped) {
+          badge.textContent = 'Пропущено: 0 баллов';
+        } else {
+          var pot = calcCurrentPotentialPoints(qState);
+          badge.textContent = 'Ценность: ' + pot + ' баллов';
+        }
+      }
+
+      function renderQuestion(levelIdx, questionIdx) {
+        state.levelIdx = levelIdx;
+        state.questionIdx = questionIdx;
+        resetWidgetLocals();
+        resetSkipConfirm();
+
+        var lvl = LEVELS[levelIdx];
+        var q = lvl.questions[questionIdx];
+        var qState = state.progress[levelIdx][questionIdx];
+
+        var themeTag = document.getElementById('level-theme-tag');
+        if (lvl.id === 6) {
+          elScreenGame.className = 'rpg-card python-theme';
+          themeTag.className = 'theme-tag py-tag';
+        } else {
+          elScreenGame.className = 'rpg-card';
+          themeTag.className = 'theme-tag';
+        }
+
+        themeTag.textContent = 'Тема: ' + lvl.theme;
+        document.getElementById('level-title').textContent = lvl.name;
+        document.getElementById('level-reward-icon').textContent = lvl.rewardIcon;
+        document.getElementById('level-reward-name').textContent = lvl.rewardName;
+
+        // Степпер 5 вопросов
+        document.getElementById('subq-label').textContent =
+          'Вопрос ' + (questionIdx + 1) + ' из 5';
+
+        var dotsWrap = document.getElementById('subq-dots');
+        dotsWrap.innerHTML = '';
+        for (var i = 0; i < 5; i++) {
+          var dot = document.createElement('div');
+          var st = state.progress[levelIdx][i];
+          var cls = 'subq-dot';
+          if (st.solved) cls += ' solved';
+          else if (st.skipped) cls += ' skipped';
+          else if (i === questionIdx) cls += ' current';
+          dot.className = cls;
+          dot.textContent = st.solved ? '✓' : (st.skipped ? '—' : String(i + 1));
+          dotsWrap.appendChild(dot);
+        }
+
+        updatePotentialPointsBadge();
+
+        // Текст вопроса
+        document.getElementById('question-prompt').innerHTML = q.prompt;
+
+        // Поле ввода и кнопки проверки/пропуска
+        var inputLabel = document.getElementById('answer-input-label');
+        var inputEl = document.getElementById('answer-input');
+        var checkBtn = document.getElementById('check-answer-btn');
+        var skipBtn = document.getElementById('skip-question-btn');
+
+        if (q.hasTextInput) {
+          inputLabel.classList.remove('hidden');
+          inputEl.classList.remove('hidden');
+          inputLabel.textContent = q.inputLabel || 'Ваш ответ:';
+          inputEl.placeholder = q.inputPlaceholder || 'Введи ответ...';
+          inputEl.value = '';
+          inputEl.disabled = false;
+          checkBtn.textContent = '✅ Проверить ответ';
+        } else {
+          inputLabel.classList.add('hidden');
+          inputEl.classList.add('hidden');
+          inputEl.value = '';
+          checkBtn.textContent = q.checkBtnText || '✅ Проверить';
+        }
+        checkBtn.disabled = false;
+        checkBtn.classList.remove('hidden');
+        skipBtn.disabled = false;
+        skipBtn.classList.remove('hidden');
+
+        hideFeedback();
+        document.getElementById('solved-card').classList.add('hidden');
+        document.getElementById('skipped-card').classList.add('hidden');
+
+        // Подсказки
+        document.getElementById('hints-list').innerHTML = '';
+        var hintBtn = document.getElementById('hint-btn');
+        hintBtn.disabled = false;
+        hintBtn.textContent = '💡 Нужна подсказка? (-2 балла)';
+        document.getElementById('hints-counter-label').textContent =
+          'Подсказок использовано: ' + qState.hintsUsed + ' из 2';
+
+        // Интерактивный виджет
+        var stage = document.getElementById('question-interactive-area');
+        stage.innerHTML = '';
+        renderWidgetForQuestion(stage, q);
+
+        updateHUD(false);
+
+        if (q.hasTextInput) {
+          setTimeout(function () { inputEl.focus(); }, 30);
+        }
+      }
+
+      function renderWidgetForQuestion(container, q) {
+        if (q.widgetType === 'alphaBinary32') {
+          renderAlphaBinary32(container, q);
+        } else if (q.widgetType === 'pixelGrid') {
+          renderPixelGrid(container, q);
+        } else if (q.widgetType === 'rgbLab') {
+          renderRgbLab(container);
+        } else if (q.widgetType === 'coordGrid') {
+          renderCoordGrid(container, q);
+        } else if (q.widgetType === 'rleStrip') {
+          renderRleStrip(container, q);
+        } else if (q.widgetType === 'formulaCard') {
+          renderFormulaCard(container, q);
+        } else if (q.widgetType === 'pythonCode') {
+          renderPythonCode(container, q);
+        }
+      }
+
+      /* --- Виджет 1: Битовые переключатели (16-8-4-2-1) и таблица алфавита 1-32 --- */
+      function renderAlphaBinary32(container, q) {
+        var weights = [16, 8, 4, 2, 1];
+        var sum = 0;
+        for (var i = 0; i < 5; i++) {
+          if (state.bin5Bits[i] === 1) sum += weights[i];
+        }
+
+        var html = '<div class="stage-box">';
+
+        if (q.cipherCodes && q.cipherCodes.length > 0) {
+          html += '<div class="stage-subtitle" style="text-align: center;">🔢 Зашифрованные 5-битные коды:</div>';
+          html += '<div class="cipher-cards-row">';
+          for (var c = 0; c < q.cipherCodes.length; c++) {
+            html += '<div class="cipher-card">';
+            html += '<div class="cipher-card-idx">Буква №' + (c + 1) + '</div>';
+            html += '<div class="cipher-card-bits">' + q.cipherCodes[c] + '</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+
+        html += '<div class="stage-subtitle" style="text-align: center;">⚡ Тренажёр битов (16 - 8 - 4 - 2 - 1) — нажимай на биты для проверки:</div>';
+        html += '<div class="bit-switches-row">';
+        for (var b = 0; b < 5; b++) {
+          var isOn = state.bin5Bits[b] === 1;
+          html += '<button type="button" class="bit-switch-btn' + (isOn ? ' on' : '') + '" data-bit-idx="' + b + '">';
+          html += '<div class="bit-weight-lbl">Вес ' + weights[b] + '</div>';
+          html += '<div class="bit-val-lbl">' + state.bin5Bits[b] + '</div>';
+          html += '</button>';
+        }
+        html += '</div>';
+
+        html += '<div class="bit-live-readout">';
+        html += 'Код: <strong style="color: var(--accent-cyan);">' + state.bin5Bits.join('') + '₂</strong> = ';
+        html += '<strong style="color: var(--accent-gold);">' + sum + '₁₀</strong>';
+        if (sum >= 1 && sum <= 32) {
+          html += ' → буква <strong style="color: var(--accent-emerald);">«' + RUSSIAN_ALPHABET_32[sum - 1] + '»</strong>';
+        } else {
+          html += ' (выбери от 1 до 32 для буквы)';
+        }
+        html += '</div>';
+
+        html += '<div class="stage-subtitle" style="color: var(--accent-emerald); text-align: center;">📜 Кликабельная таблица русского алфавита (1–32):</div>';
+        html += '<div class="alpha-table-grid">';
+        for (var a = 0; a < RUSSIAN_ALPHABET_32.length; a++) {
+          var num = a + 1;
+          var isSel = (state.alphaSelectedNum === num);
+          html += '<button type="button" class="alpha-cell-btn' + (isSel ? ' selected' : '') + '" data-alpha-num="' + num + '">';
+          html += '<div class="alpha-num">№' + num + '</div>';
+          html += '<div class="alpha-char">' + RUSSIAN_ALPHABET_32[a] + '</div>';
+          html += '</button>';
+        }
+        html += '</div></div>';
+
+        container.innerHTML = html;
+      }
+
+      /* --- Виджет 2: Интерактивная пиксельная сетка 5x5 --- */
+      function renderPixelGrid(container, q) {
+        var html = '<div class="stage-box">';
+        html += '<div class="stage-subtitle" style="text-align: center;">🎨 Нажимай на клетки сетки 5×5 (1 — чёрный пиксель, 0 — белый):</div>';
+        html += '<div class="pixel-workbench">';
+
+        // Целевые коды строк + текущий код ученика
+        html += '<div class="pixel-codes-list">';
+        for (var r = 0; r < 5; r++) {
+          var userRowStr = state.pixelGrid[r].join('');
+          var isRowMatch = (userRowStr === q.targetRows[r]);
+          html += '<div class="pixel-code-row' + (isRowMatch ? ' matched' : '') + '">';
+          html += '<span style="color: var(--text-muted);">Стр.' + (r + 1) + ':</span>';
+          html += '<strong style="color: var(--accent-gold);">' + q.targetRows[r] + '</strong>';
+          html += '<span style="font-size: 12px; color: ' + (isRowMatch ? 'var(--accent-emerald)' : 'var(--text-muted)') + ';">';
+          html += '(ваш: ' + userRowStr + (isRowMatch ? ' ✓' : '') + ')';
+          html += '</span></div>';
+        }
+        html += '<button type="button" class="btn btn-secondary" data-px-clear="1" style="margin-top: 6px; padding: 8px 12px; font-size: 13px;">🧹 Очистить сетку</button>';
+        html += '</div>';
+
+        // Сетка кнопок 5x5
+        html += '<div class="pixel-grid-5x5">';
+        for (var row = 0; row < 5; row++) {
+          for (var col = 0; col < 5; col++) {
+            var val = state.pixelGrid[row][col];
+            var cls = 'px-cell-btn';
+            if (state.pixelSolvedVisual && val === 1) cls += ' filled solved-gold';
+            else if (val === 1) cls += ' filled';
+            html += '<button type="button" class="' + cls + '" data-px-r="' + row + '" data-px-c="' + col + '">' + val + '</button>';
+          }
+        }
+        html += '</div></div></div>';
+
+        container.innerHTML = html;
+      }
+
+      function checkPixelGridMatch(targetRows) {
+        for (var r = 0; r < 5; r++) {
+          if (state.pixelGrid[r].join('') !== targetRows[r]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      /* --- Виджет 3: Лаборатория RGB --- */
+      function toHex2(n) {
+        var h = Math.max(0, Math.min(255, n)).toString(16).toUpperCase();
+        return h.length < 2 ? '0' + h : h;
+      }
+
+      function renderRgbLab(container) {
+        var r = state.rgb.r;
+        var g = state.rgb.g;
+        var b = state.rgb.b;
+        var rgbCss = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+        var hexStr = '#' + toHex2(r) + toHex2(g) + toHex2(b);
+
+        var channels = [
+          { key: 'r', label: 'R — Красный (Red)', color: '#fb7185', val: r },
+          { key: 'g', label: 'G — Зелёный (Green)', color: '#34d399', val: g },
+          { key: 'b', label: 'B — Синий (Blue)', color: '#38bdf8', val: b }
+        ];
+
+        var html = '<div class="stage-box">';
+        html += '<div class="rgb-lab-grid"><div class="rgb-sliders-col">';
+
+        for (var i = 0; i < channels.length; i++) {
+          var ch = channels[i];
+          html += '<div class="rgb-channel-card">';
+          html += '<div class="rgb-channel-head">';
+          html += '<span style="color:' + ch.color + ';">' + ch.label + '</span>';
+          html += '<span id="rgb-val-' + ch.key + '" style="color: var(--accent-gold);">' + ch.val + '</span>';
+          html += '</div>';
+          html += '<div class="rgb-controls-line">';
+          html += '<button type="button" class="rgb-step-btn" data-rgb-ch="' + ch.key + '" data-rgb-delta="-5">-5</button>';
+          html += '<input type="range" min="0" max="255" value="' + ch.val + '" class="rgb-range" data-rgb-slider="' + ch.key + '" />';
+          html += '<button type="button" class="rgb-step-btn" data-rgb-ch="' + ch.key + '" data-rgb-delta="5">+5</button>';
+          html += '</div></div>';
+        }
+
+        html += '</div>';
+
+        // Живой кристалл
+        html += '<div class="rgb-crystal-box">';
+        html += '<div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">МАГИЧЕСКИЙ КРИСТАЛЛ</div>';
+        html += '<div id="rgb-crystal-orb" class="rgb-crystal-orb" style="background-color:' + rgbCss + '; box-shadow: 0 0 28px ' + rgbCss + ';"></div>';
+        html += '<div id="rgb-hex-readout" class="mono" style="font-size: 15px; font-weight: 800; color: var(--accent-gold);">' + hexStr + '</div>';
+        html += '<div id="rgb-tuple-readout" class="mono" style="font-size: 12px; color: var(--text-muted);">rgb(' + r + ', ' + g + ', ' + b + ')</div>';
+        html += '</div></div></div>';
+
+        container.innerHTML = html;
+      }
+
+      function syncRgbVisualOnly() {
+        var r = state.rgb.r;
+        var g = state.rgb.g;
+        var b = state.rgb.b;
+        var rgbCss = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+        var hexStr = '#' + toHex2(r) + toHex2(g) + toHex2(b);
+
+        var elR = document.getElementById('rgb-val-r');
+        var elG = document.getElementById('rgb-val-g');
+        var elB = document.getElementById('rgb-val-b');
+        var orb = document.getElementById('rgb-crystal-orb');
+        var hexEl = document.getElementById('rgb-hex-readout');
+        var tupEl = document.getElementById('rgb-tuple-readout');
+
+        if (elR) elR.textContent = r;
+        if (elG) elG.textContent = g;
+        if (elB) elB.textContent = b;
+        if (orb) {
+          orb.style.backgroundColor = rgbCss;
+          orb.style.boxShadow = '0 0 28px ' + rgbCss;
+        }
+        if (hexEl) hexEl.textContent = hexStr;
+        if (tupEl) tupEl.textContent = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+      }
+
+      function checkRgbTarget(target) {
+        var r = state.rgb.r;
+        var g = state.rgb.g;
+        var b = state.rgb.b;
+        if (target === 'yellow')  return (r >= 210 && g >= 210 && b <= 60);
+        if (target === 'cyan')    return (r <= 60 && g >= 210 && b >= 210);
+        if (target === 'magenta') return (r >= 210 && g <= 60 && b >= 210);
+        if (target === 'white')   return (r >= 235 && g >= 235 && b >= 235);
+        if (target === 'orange')  return (r >= 220 && g >= 100 && g <= 185 && b <= 50);
+        return false;
+      }
+
+      /* --- Виджет 4: Координатная плоскость 6x6 --- */
+      function renderCoordGrid(container, q) {
+        var html = '<div class="stage-box"><div class="coord-wrap">';
+        html += '<div class="stage-subtitle">🧭 Нажми на нужную плиту (X; Y) на плоскости или введи координаты ниже:</div>';
+        html += '<div class="coord-board-with-axes">';
+
+        // Строки сверху вниз от Y = 6 до Y = 1
+        for (var y = 6; y >= 1; y--) {
+          html += '<div class="axis-lbl">Y=' + y + '</div>';
+          for (var x = 1; x <= 6; x++) {
+            var key = x + ';' + y;
+            var isKnight = (q.knightPos && q.knightPos.x === x && q.knightPos.y === y);
+            var isSel = (state.coordSelected === key);
+            var cls = 'coord-tile-btn';
+            if (isKnight) cls += ' knight';
+            if (isSel) cls += ' selected';
+            html += '<button type="button" class="' + cls + '" data-coord-x="' + x + '" data-coord-y="' + y + '">';
+            if (isKnight) {
+              html += '<span style="font-size: 16px;">🛡️</span>';
+            }
+            html += '<span>' + x + ';' + y + '</span>';
+            html += '</button>';
+          }
+        }
+
+        // Нижняя подпись оси X
+        html += '<div class="axis-lbl">0</div>';
+        for (var xLbl = 1; xLbl <= 6; xLbl++) {
+          html += '<div class="axis-lbl">X=' + xLbl + '</div>';
+        }
+
+        html += '</div></div></div>';
+        container.innerHTML = html;
+      }
+
+      /* --- Виджет 5: Полоса пикселей RLE и карточки формул --- */
+      function renderRleStrip(container, q) {
+        var html = '<div class="stage-box">';
+        html += '<div class="stage-subtitle" style="text-align: center;">📦 Визуальная цепочка пикселей для сжатия:</div>';
+        html += '<div class="rle-strip-row">';
+        for (var i = 0; i < q.items.length; i++) {
+          var it = q.items[i];
+          html += '<div class="rle-block ' + it.cls + '">' + it.ch + '</div>';
+        }
+        html += '</div>';
+        html += '<div class="rle-legend"><span>Правило RLE: &lt;количество подряд&gt;&lt;буква&gt; без пробелов (например: 2А3Б)</span></div>';
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      function renderFormulaCard(container, q) {
+        var html = '<div class="stage-box"><div class="formula-chips-row">';
+        for (var i = 0; i < q.formulaChips.length; i++) {
+          html += '<div class="formula-chip">' + q.formulaChips[i] + '</div>';
+        }
+        html += '</div></div>';
+        container.innerHTML = html;
+      }
+
+      /* --- Виджет 6: Подсвеченный код Python и интерактивный справочник --- */
+      function renderPythonCode(container, q) {
+        var activeLine = null;
+        var activeText = 'Нажми на любую кнопку конструкции Python ниже, чтобы подсветить строку и узнать, как она работает.';
+
+        if (state.pyActiveDoc && q.docs) {
+          for (var d = 0; d < q.docs.length; d++) {
+            if (q.docs[d].key === state.pyActiveDoc) {
+              activeLine = q.docs[d].line;
+              activeText = '📘 ' + q.docs[d].title + ' — ' + q.docs[d].text;
+              break;
+            }
+          }
+        }
+
+        var html = '<div class="stage-box">';
+        html += '<div class="py-code-editor">';
+        for (var i = 0; i < q.lines.length; i++) {
+          var ln = q.lines[i];
+          var isHl = (activeLine === ln.num);
+          html += '<div class="py-line' + (isHl ? ' highlighted' : '') + '">';
+          html += '<span class="py-line-num">' + ln.num + '</span>';
+          html += '<span>' + ln.code + '</span>';
+          html += '</div>';
+        }
+        html += '</div>';
+
+        if (q.docs && q.docs.length > 0) {
+          html += '<div class="stage-subtitle">🐍 Интерактивный мини-справочник Python:</div>';
+          html += '<div class="py-docs-btns">';
+          for (var b = 0; b < q.docs.length; b++) {
+            var doc = q.docs[b];
+            var isAct = (state.pyActiveDoc === doc.key);
+            html += '<button type="button" class="py-doc-btn' + (isAct ? ' active' : '') + '" data-py-doc="' + doc.key + '">' + doc.title + '</button>';
+          }
+          html += '</div>';
+          html += '<div class="py-doc-panel">' + activeText + '</div>';
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      /* =====================================================================
+         7. ПРОВЕРКА ОТВЕТОВ, ПОДСКАЗКИ, ПРОПУСК ВОПРОСА И ПЕРЕХОДЫ
+         ===================================================================== */
+      function lockCurrentQuestionControls() {
+        var inputEl = document.getElementById('answer-input');
+        var checkBtn = document.getElementById('check-answer-btn');
+        var skipBtn = document.getElementById('skip-question-btn');
+        var hintBtn = document.getElementById('hint-btn');
+
+        inputEl.disabled = true;
+        checkBtn.disabled = true;
+        checkBtn.classList.add('hidden');
+        skipBtn.disabled = true;
+        skipBtn.classList.add('hidden');
+        hintBtn.disabled = true;
+      }
+
+      function markCurrentQuestionSolved() {
+        var lvl = LEVELS[state.levelIdx];
+        var q = lvl.questions[state.questionIdx];
+        var qState = state.progress[state.levelIdx][state.questionIdx];
+
+        if (qState.solved || qState.skipped) return;
+
+        resetSkipConfirm();
+        var earned = calcCurrentPotentialPoints(qState);
+        qState.solved = true;
+        qState.pointsEarned = earned;
+
+        playSound('correct');
+        hideFeedback();
+        lockCurrentQuestionControls();
+
+        var dots = document.getElementById('subq-dots').children;
+        if (dots[state.questionIdx]) {
+          dots[state.questionIdx].className = 'subq-dot solved';
+          dots[state.questionIdx].textContent = '✓';
+        }
+        updatePotentialPointsBadge();
+        updateHUD(true);
+
+        document.getElementById('solved-pts-pill').textContent = '+' + earned + ' баллов';
+        document.getElementById('solved-explanation').textContent = q.explanation;
+
+        var nextBtn = document.getElementById('next-question-btn');
+        if (state.questionIdx < 4) {
+          nextBtn.textContent = 'Следующий вопрос →';
+          nextBtn.className = 'btn btn-primary';
+        } else {
+          nextBtn.textContent = 'Завершить зал и получить награду →';
+          nextBtn.className = 'btn btn-gold';
+        }
+
+        document.getElementById('solved-card').classList.remove('hidden');
+      }
+
+      function handleCheckAnswer() {
+        var lvl = LEVELS[state.levelIdx];
+        var q = lvl.questions[state.questionIdx];
+        var qState = state.progress[state.levelIdx][state.questionIdx];
+
+        if (qState.solved || qState.skipped) return;
+        resetSkipConfirm();
+
+        // 1) Пиксельная сетка 5x5
+        if (q.widgetType === 'pixelGrid') {
+          if (checkPixelGridMatch(q.targetRows)) {
+            state.pixelSolvedVisual = true;
+            renderPixelGrid(document.getElementById('question-interactive-area'), q);
+            markCurrentQuestionSolved();
+          } else {
+            qState.wrongAttempts++;
+            updatePotentialPointsBadge();
+            playSound('wrong');
+            showFeedback('❌ Пока неверно! Сверь свои строки со списком кодов, открой подсказку или пропусти вопрос.', 'error');
+          }
+          return;
+        }
+
+        // 2) Лаборатория RGB
+        if (q.widgetType === 'rgbLab') {
+          if (checkRgbTarget(q.rgbTarget)) {
+            markCurrentQuestionSolved();
+          } else {
+            qState.wrongAttempts++;
+            updatePotentialPointsBadge();
+            playSound('wrong');
+            showFeedback('❌ Пока неверно! Подкрути каналы R, G и B, открой подсказку или пропусти вопрос.', 'error');
+          }
+          return;
+        }
+
+        // 3) Текстовый / числовой / координатный ответ
+        var rawVal = document.getElementById('answer-input').value;
+        if (!rawVal.trim()) {
+          playSound('wrong');
+          showFeedback('⚠️ Поле ответа пустое! Введи свой ответ, открой подсказку или пропусти вопрос.', 'info');
+          return;
+        }
+
+        var isOk = checkSmartAnswer(rawVal, q.accepted, {
+          isCoordinate: Boolean(q.isCoordinate),
+          keepPairSeparator: Boolean(q.keepPairSeparator)
+        });
+
+        if (!isOk) {
+          qState.wrongAttempts++;
+          updatePotentialPointsBadge();
+          playSound('wrong');
+          showFeedback('❌ Пока неверно! Попробуй ещё раз, открой подсказку или пропусти вопрос, если затрудняешься.', 'error');
+          return;
+        }
+
+        if (q.widgetType === 'coordGrid') {
+          state.coordSelected = normalizeCoordinates(rawVal);
+          renderCoordGrid(document.getElementById('question-interactive-area'), q);
+        }
+
+        markCurrentQuestionSolved();
+      }
+
+      function handleSkipQuestion() {
+        var qState = state.progress[state.levelIdx][state.questionIdx];
+        if (qState.solved || qState.skipped) return;
+
+        var skipBtn = document.getElementById('skip-question-btn');
+        if (!state.skipConfirmArmed) {
+          playSound('click');
+          state.skipConfirmArmed = true;
+          skipBtn.textContent = 'Точно пропустить? (0 баллов)';
+          skipBtn.classList.add('confirming');
+          return;
+        }
+
+        resetSkipConfirm();
+        qState.skipped = true;
+        qState.solved = false;
+        qState.pointsEarned = 0;
+
+        playSound('click');
+        hideFeedback();
+        lockCurrentQuestionControls();
+
+        var dots = document.getElementById('subq-dots').children;
+        if (dots[state.questionIdx]) {
+          dots[state.questionIdx].className = 'subq-dot skipped';
+          dots[state.questionIdx].textContent = '—';
+        }
+        updatePotentialPointsBadge();
+        updateHUD(false);
+
+        var nextAfterSkipBtn = document.getElementById('next-after-skip-btn');
+        nextAfterSkipBtn.textContent = (state.questionIdx < 4)
+          ? 'Следующий вопрос →'
+          : 'Завершить зал →';
+
+        document.getElementById('skipped-card').classList.remove('hidden');
+      }
+
+      function handleRevealHint() {
+        var lvl = LEVELS[state.levelIdx];
+        var q = lvl.questions[state.questionIdx];
+        var qState = state.progress[state.levelIdx][state.questionIdx];
+
+        if (qState.solved || qState.skipped || qState.hintsUsed >= 2) return;
+        resetSkipConfirm();
+
+        playSound('hint');
+        var idx = qState.hintsUsed;
+        qState.hintsUsed++;
+
+        var item = document.createElement('div');
+        item.className = 'hint-item';
+        item.innerHTML = '<strong>💡 Подсказка ' + (idx + 1) + ':</strong> ' + q.hints[idx];
+        document.getElementById('hints-list').appendChild(item);
+
+        var hintBtn = document.getElementById('hint-btn');
+        if (qState.hintsUsed === 1) {
+          hintBtn.textContent = '💡 Вторая подсказка (-3 балла)';
+        } else {
+          hintBtn.disabled = true;
+          hintBtn.textContent = '💡 Все подсказки открыты';
+        }
+
+        document.getElementById('hints-counter-label').textContent =
+          'Подсказок использовано: ' + qState.hintsUsed + ' из 2';
+        updatePotentialPointsBadge();
+      }
+
+      function advanceAfterQuestion() {
+        playSound('click');
+        if (state.questionIdx < 4) {
+          renderQuestion(state.levelIdx, state.questionIdx + 1);
+        } else {
+          openLevelArtifactModal();
+        }
+      }
+
+      function openLevelArtifactModal() {
+        playSound('levelup');
+        var lvl = LEVELS[state.levelIdx];
+        var tier = getLevelArtifactTier(state.levelIdx);
+        var solvedCount = getLevelSolvedCount(state.levelIdx);
+        var lvlPts = getLevelScore(state.levelIdx);
+        updateHUD(false);
+
+        var headerTag = document.getElementById('modal-header-tag');
+        var iconBox = document.getElementById('modal-artifact-icon');
+        var nameEl = document.getElementById('modal-artifact-name');
+        var descEl = document.getElementById('modal-artifact-desc');
+
+        document.getElementById('modal-level-score').textContent =
+          'Решено: ' + solvedCount + ' из 5 • Баллы за уровень: ' + lvlPts + ' из 50';
+
+        if (tier === 'full') {
+          headerTag.textContent = '✨ Зал пройден! Получен артефакт:';
+          headerTag.style.color = 'var(--accent-emerald)';
+          iconBox.textContent = lvl.rewardIcon;
+          iconBox.style.borderColor = 'var(--accent-gold)';
+          iconBox.style.boxShadow = '0 0 24px rgba(250, 204, 21, 0.45)';
+          nameEl.textContent = lvl.rewardName;
+          nameEl.style.color = 'var(--accent-gold)';
+          descEl.textContent = lvl.rewardDesc;
+        } else if (tier === 'shard') {
+          headerTag.textContent = '✨ Зал пройден! Получен тусклый осколок:';
+          headerTag.style.color = 'var(--accent-cyan)';
+          iconBox.textContent = '✨';
+          iconBox.style.borderColor = 'var(--accent-cyan)';
+          iconBox.style.boxShadow = '0 0 20px rgba(56, 189, 248, 0.35)';
+          nameEl.textContent = 'Осколок: ' + lvl.rewardName;
+          nameEl.style.color = 'var(--accent-cyan)';
+          descEl.textContent = 'Решено ' + solvedCount + ' из 5 вопросов. Для целого артефакта нужно решить минимум 3 задания, но тебе достаётся тусклый осколок!';
+        } else {
+          headerTag.textContent = '🔒 Зал пройден без наград';
+          headerTag.style.color = 'var(--text-muted)';
+          iconBox.textContent = '🔒';
+          iconBox.style.borderColor = 'var(--border-glow)';
+          iconBox.style.boxShadow = 'none';
+          nameEl.textContent = 'Артефакт остался заперт';
+          nameEl.style.color = '#cbd5e1';
+          descEl.textContent = 'В этом зале все 5 вопросов были пропущены (0 из 5). Двигаемся дальше!';
+        }
+
+        var isLastLevel = (state.levelIdx === LEVELS.length - 1);
+        document.getElementById('modal-next-btn').textContent = isLastLevel
+          ? '🏆 Открыть портал выхода и увидеть итоговые баллы'
+          : 'Перейти на Уровень ' + (state.levelIdx + 2) + ' →';
+
+        document.getElementById('reward-modal').classList.remove('hidden');
+      }
+
+      function closeModalAndProceed() {
+        playSound('click');
+        document.getElementById('reward-modal').classList.add('hidden');
+        if (state.levelIdx < LEVELS.length - 1) {
+          renderQuestion(state.levelIdx + 1, 0);
+        } else {
+          finishVictory();
+        }
+      }
+
+      /* =====================================================================
+         8. ФИНАЛЬНЫЙ СЕРТИФИКАТ И КОПИРОВАНИЕ ОТЧЁТА ДЛЯ УЧИТЕЛЯ
+         ===================================================================== */
+      function finishVictory() {
+        playSound('victory');
+
+        var totalScore = getTotalScore();
+        var pct = Math.round((totalScore / 300) * 100);
+        var solvedCount = getSolvedQuestionsCount();
+        var skippedCount = getSkippedQuestionsCount();
+        var totalHints = getTotalHintsCount();
+        var gradeAndRank = getGradeAndRank(totalScore);
+
+        document.getElementById('cert-player-name').textContent = state.playerName;
+        document.getElementById('cert-total-score').textContent = totalScore + ' из 300 баллов';
+        document.getElementById('cert-score-pct').textContent = 'Результат: ' + pct + '% от максимума';
+        document.getElementById('cert-grade-badge').textContent = '🏅 ' + gradeAndRank;
+        document.getElementById('cert-solved-count').textContent = solvedCount + ' / 30';
+        document.getElementById('cert-skipped-count').textContent = skippedCount + ' / 30';
+        document.getElementById('cert-hints-used').textContent = String(totalHints);
+
+        var tbody = document.getElementById('cert-levels-tbody');
+        tbody.innerHTML = '';
+        for (var i = 0; i < LEVELS.length; i++) {
+          var lScore = getLevelScore(i);
+          var lSolved = getLevelSolvedCount(i);
+          var tier = getLevelArtifactTier(i);
+          var badgeIcon = tier === 'full' ? LEVELS[i].rewardIcon : (tier === 'shard' ? '✨' : '🔒');
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + badgeIcon + ' ' + LEVELS[i].name +
+            ' <span style="color: var(--text-muted); font-size: 12px;">(решено ' + lSolved + '/5)</span></td>' +
+            '<td class="pts-cell">' + lScore + ' / 50</td>';
+          tbody.appendChild(tr);
+        }
+
+        var artGrid = document.getElementById('cert-artifacts-grid');
+        artGrid.innerHTML = '';
+        for (var a = 0; a < LEVELS.length; a++) {
+          var aTier = getLevelArtifactTier(a);
+          var item = document.createElement('div');
+          if (aTier === 'full') {
+            item.className = 'cert-art-item';
+            item.innerHTML =
+              '<span style="font-size: 24px;">' + LEVELS[a].rewardIcon + '</span>' +
+              '<span style="font-size: 10px; color: #fef08a; line-height: 1.2;">' + LEVELS[a].rewardName + '</span>';
+          } else if (aTier === 'shard') {
+            item.className = 'cert-art-item shard';
+            item.innerHTML =
+              '<span style="font-size: 22px;">✨</span>' +
+              '<span style="font-size: 10px; color: #bae6fd; line-height: 1.2;">Осколок: ' + LEVELS[a].rewardName + '</span>';
+          } else {
+            item.className = 'cert-art-item locked';
+            item.innerHTML =
+              '<span style="font-size: 22px;">🔒</span>' +
+              '<span style="font-size: 10px; color: #94a3b8; line-height: 1.2;">Закрыто</span>';
+          }
+          artGrid.appendChild(item);
+        }
+
+        document.getElementById('copy-toast').classList.add('hidden');
+        showScreen('victory');
+      }
+
+      function copyCertificateText() {
+        playSound('click');
+        var totalScore = getTotalScore();
+        var pct = Math.round((totalScore / 300) * 100);
+        var gradeAndRank = getGradeAndRank(totalScore);
+        var solvedCount = getSolvedQuestionsCount();
+        var skippedCount = getSkippedQuestionsCount();
+        var totalHints = getTotalHintsCount();
+
+        var lines = [
+          '🏰 Квест «Побег из Пиксельного Замка» пройден!',
+          '👤 Ученик: ' + state.playerName,
+          '⭐ Итоговый балл: ' + totalScore + ' из 300 баллов (' + pct + '%)',
+          '🏅 ' + gradeAndRank,
+          '✅ Решено вопросов: ' + solvedCount + ' / 30',
+          '⏭️ Пропущено вопросов: ' + skippedCount + ' / 30',
+          '💡 Использовано подсказок: ' + totalHints,
+          '📊 Баллы по уровням:'
+        ];
+
+        var artSummary = [];
+        for (var i = 0; i < LEVELS.length; i++) {
+          var tier = getLevelArtifactTier(i);
+          var statusText = tier === 'full' ? LEVELS[i].rewardIcon : (tier === 'shard' ? '✨ осколок' : '🔒');
+          lines.push('   • ' + LEVELS[i].shortName + ': ' + getLevelScore(i) + ' / 50 (решено ' + getLevelSolvedCount(i) + '/5)');
+          artSummary.push(statusText);
+        }
+        lines.push('🎁 Награды залов: ' + artSummary.join(' | '));
+
+        var report = lines.join('\n');
+
+        function fallbackCopy() {
+          var fallbackArea = document.getElementById('clipboard-fallback');
+          fallbackArea.value = report;
+          fallbackArea.select();
+          fallbackArea.setSelectionRange(0, 99999);
+          try {
+            document.execCommand('copy');
+          } catch (e) {}
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(report).catch(fallbackCopy);
+        } else {
+          fallbackCopy();
+        }
+
+        document.getElementById('copy-toast').classList.remove('hidden');
+      }
+
+      function startNewGame() {
+        playSound('click');
+        var rawName = document.getElementById('player-name-input').value.trim();
+        state.playerName = rawName || 'Юный программист';
+        state.levelIdx = 0;
+        state.questionIdx = 0;
+        state.progress = createInitialProgress();
+        resetSkipConfirm();
+
+        showScreen('game');
+        renderQuestion(0, 0);
+      }
+
+      /* =====================================================================
+         9. ДЕЛЕГИРОВАНИЕ СОБЫТИЙ (0 INLINE-АТРИБУТОВ ONCLICK / ONINPUT)
+         ===================================================================== */
+      document.body.addEventListener('click', function (e) {
+        var target = e.target;
+
+        // Кнопки управления экранами и звуком
+        if (target.closest('#start-sound-btn') || target.closest('#hud-sound-btn')) {
+          toggleSound();
+          return;
+        }
+        if (target.closest('#start-game-btn') || target.closest('#restart-game-btn')) {
+          startNewGame();
+          return;
+        }
+        if (target.closest('#check-answer-btn')) {
+          handleCheckAnswer();
+          return;
+        }
+        if (target.closest('#skip-question-btn')) {
+          handleSkipQuestion();
+          return;
+        }
+        if (target.closest('#next-question-btn') || target.closest('#next-after-skip-btn')) {
+          advanceAfterQuestion();
+          return;
+        }
+        if (target.closest('#hint-btn')) {
+          handleRevealHint();
+          return;
+        }
+        if (target.closest('#modal-next-btn')) {
+          closeModalAndProceed();
+          return;
+        }
+        if (target.closest('#copy-cert-btn')) {
+          copyCertificateText();
+          return;
+        }
+
+        // Уровень 1: клик по битовым переключателям (16 - 8 - 4 - 2 - 1)
+        var bitBtn = target.closest('[data-bit-idx]');
+        if (bitBtn) {
+          resetSkipConfirm();
+          var bIdx = parseInt(bitBtn.getAttribute('data-bit-idx'), 10);
+          playSound('click');
+          state.bin5Bits[bIdx] = state.bin5Bits[bIdx] === 1 ? 0 : 1;
+          var weights = [16, 8, 4, 2, 1];
+          var newSum = 0;
+          for (var w = 0; w < 5; w++) {
+            if (state.bin5Bits[w] === 1) newSum += weights[w];
+          }
+          state.alphaSelectedNum = (newSum >= 1 && newSum <= 32) ? newSum : null;
+          renderAlphaBinary32(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+
+        // Уровень 1: клик по ячейке таблицы алфавита 1-32
+        var alphaBtn = target.closest('[data-alpha-num]');
+        if (alphaBtn) {
+          resetSkipConfirm();
+          var aNum = parseInt(alphaBtn.getAttribute('data-alpha-num'), 10);
+          playSound('click');
+          state.alphaSelectedNum = aNum;
+          // Синхронизируем битовые кнопки с выбранной буквой для наглядности
+          var binStr = aNum.toString(2);
+          while (binStr.length < 5) binStr = '0' + binStr;
+          for (var k = 0; k < 5; k++) {
+            state.bin5Bits[k] = parseInt(binStr.charAt(k), 10);
+          }
+          renderAlphaBinary32(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+
+        // Уровень 2: клик по клетке пиксельной сетки 5x5
+        var pxCell = target.closest('[data-px-r]');
+        if (pxCell) {
+          var qStatePx = state.progress[state.levelIdx][state.questionIdx];
+          if (qStatePx.solved || qStatePx.skipped) return;
+          resetSkipConfirm();
+          var r = parseInt(pxCell.getAttribute('data-px-r'), 10);
+          var c = parseInt(pxCell.getAttribute('data-px-c'), 10);
+          playSound('click');
+          state.pixelGrid[r][c] = state.pixelGrid[r][c] === 1 ? 0 : 1;
+          renderPixelGrid(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+
+        // Уровень 2: очистка пиксельной сетки
+        if (target.closest('[data-px-clear]')) {
+          var qStateClr = state.progress[state.levelIdx][state.questionIdx];
+          if (qStateClr.solved || qStateClr.skipped) return;
+          resetSkipConfirm();
+          playSound('click');
+          state.pixelGrid = [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]
+          ];
+          renderPixelGrid(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+
+        // Уровень 3: кнопки точной подстройки RGB (-5 / +5)
+        var rgbStepBtn = target.closest('[data-rgb-ch]');
+        if (rgbStepBtn) {
+          var qStateRgb = state.progress[state.levelIdx][state.questionIdx];
+          if (qStateRgb.solved || qStateRgb.skipped) return;
+          resetSkipConfirm();
+          var ch = rgbStepBtn.getAttribute('data-rgb-ch');
+          var delta = parseInt(rgbStepBtn.getAttribute('data-rgb-delta'), 10);
+          playSound('click');
+          state.rgb[ch] = Math.max(0, Math.min(255, state.rgb[ch] + delta));
+          var sliderEl = document.querySelector('[data-rgb-slider="' + ch + '"]');
+          if (sliderEl) sliderEl.value = state.rgb[ch];
+          syncRgbVisualOnly();
+          return;
+        }
+
+        // Уровень 4: клик по плите координатной сетки 6x6
+        var coordBtn = target.closest('[data-coord-x]');
+        if (coordBtn) {
+          var qStateCoord = state.progress[state.levelIdx][state.questionIdx];
+          if (qStateCoord.solved || qStateCoord.skipped) return;
+          resetSkipConfirm();
+          var cx = coordBtn.getAttribute('data-coord-x');
+          var cy = coordBtn.getAttribute('data-coord-y');
+          playSound('click');
+          state.coordSelected = cx + ';' + cy;
+          var ansInput = document.getElementById('answer-input');
+          if (ansInput) ansInput.value = '(' + cx + '; ' + cy + ')';
+          renderCoordGrid(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+
+        // Уровень 6: кнопки интерактивного мини-справочника Python
+        var pyDocBtn = target.closest('[data-py-doc]');
+        if (pyDocBtn) {
+          resetSkipConfirm();
+          playSound('click');
+          var docKey = pyDocBtn.getAttribute('data-py-doc');
+          state.pyActiveDoc = (state.pyActiveDoc === docKey) ? null : docKey;
+          renderPythonCode(
+            document.getElementById('question-interactive-area'),
+            LEVELS[state.levelIdx].questions[state.questionIdx]
+          );
+          return;
+        }
+      });
+
+      // Делегирование события input для ползунков RGB и поля ответа
+      document.body.addEventListener('input', function (e) {
+        var target = e.target;
+
+        if (target.id === 'answer-input') {
+          if (state.skipConfirmArmed) {
+            resetSkipConfirm();
+          }
+          return;
+        }
+
+        if (target.hasAttribute('data-rgb-slider')) {
+          var qStateRgb = state.progress[state.levelIdx][state.questionIdx];
+          if (qStateRgb.solved || qStateRgb.skipped) return;
+          resetSkipConfirm();
+          var ch = target.getAttribute('data-rgb-slider');
+          state.rgb[ch] = parseInt(target.value, 10) || 0;
+          syncRgbVisualOnly();
+        }
+      });
+
+      // Поддержка клавиши Enter в полях ввода
+      document.body.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        var target = e.target;
+
+        if (target.id === 'player-name-input') {
+          e.preventDefault();
+          startNewGame();
+          return;
+        }
+
+        if (target.id === 'answer-input') {
+          e.preventDefault();
+          var qState = state.progress[state.levelIdx][state.questionIdx];
+          if (qState.solved || qState.skipped) {
+            advanceAfterQuestion();
+          } else {
+            handleCheckAnswer();
+          }
+        }
+      });
+
+      // Инициализация стартового экрана
+      updateSoundButtonsUI();
+      showScreen('start');
+    });
+  </script>
+</body>
+</html>
